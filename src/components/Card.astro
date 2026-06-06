@@ -1,0 +1,33 @@
+---
+export interface Props {
+  title: string;
+  description: string;
+  href?: string;
+  badge?: string;
+  class?: string;
+}
+const { title, description, href, badge, class: extraClass = "" } = Astro.props;
+const isLinked = Boolean(href);
+const Tag = isLinked ? "a" : "div";
+---
+
+<Tag
+  {...(isLinked ? { href } : {})}
+  class={`block rounded-xl border border-ink-100 bg-white p-6 transition-all duration-150 ${
+    isLinked ? "hover:border-ink-200 hover:shadow-sm" : ""
+  } ${extraClass}`}
+>
+  {badge && (
+    <span class="mb-3 inline-block rounded-full bg-warm-100 px-2.5 py-0.5 text-xs font-medium text-warm-700">
+      {badge}
+    </span>
+  )}
+  <h3 class="text-base font-semibold text-ink-900">{title}</h3>
+  <p class="mt-2 text-sm leading-relaxed text-ink-500">{description}</p>
+  {isLinked && (
+    <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-warm-600">
+      Learn more
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+    </span>
+  )}
+</Tag>

@@ -1,0 +1,70 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { wawaNote, wawaNoteSections } from "../data/products";
+---
+
+<Layout
+  title="wawa-note"
+  description={wawaNote.description}
+>
+  <!-- Header -->
+  <section class="pb-10 pt-16 sm:pt-24">
+    <p class="font-mono text-[13px] text-[#8a8a8a]">{wawaNote.status}</p>
+    <h1 class="mt-2 text-[28px] font-medium leading-tight tracking-tight text-[#1a1a1a] sm:text-[32px]">
+      {wawaNote.name}
+    </h1>
+    <p class="mt-3 max-w-[560px] text-[16px] leading-relaxed text-[#5c5c5c]">
+      {wawaNote.description}
+    </p>
+    <div class="mt-8 flex flex-wrap gap-3">
+      <a
+        href={wawaNote.github}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+        View on GitHub
+      </a>
+      <a
+        href="/docs"
+        class="inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]"
+      >
+        Documentation
+      </a>
+    </div>
+  </section>
+
+  <!-- Sections -->
+  <div class="space-y-10 pb-6">
+    {wawaNoteSections.map((section) => (
+      <section>
+        <h2 class="text-[16px] font-medium text-[#1a1a1a]">{section.title}</h2>
+        <p class="mt-2 max-w-[560px] text-[15px] leading-relaxed text-[#5c5c5c]">
+          {section.body}
+        </p>
+      </section>
+    ))}
+  </div>
+
+  <!-- Links -->
+  <section class="pb-14 pt-6">
+    <h2 class="text-[16px] font-medium text-[#1a1a1a]">Links</h2>
+    <div class="mt-3 flex flex-wrap gap-4">
+      <a
+        href={wawaNote.github}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]"
+      >
+        Source code &rarr;
+      </a>
+      <a
+        href="/docs"
+        class="text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]"
+      >
+        Documentation &rarr;
+      </a>
+    </div>
+  </section>
+</Layout>

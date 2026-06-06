@@ -1,0 +1,386 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { wawaNote } from "../data/products";
+
+const architectureDiagram = `iOS App (SwiftUI)
+  Capture │ Inbox │ Explore │ Chat │ Settings
+  ─────────────────────────────────────────
+Domain Layer
+  Agent (Shell VFS + Tool Calling) │ Content Pipeline
+  Project Models │ Graph │ Calendar │ Search
+  ─────────────────────────────────────────
+Provider Abstraction
+  OpenAI │ Anthropic │ Gemini │ DeepSeek │ OpenAI-compatible │ Local LLM
+  ─────────────────────────────────────────
+Storage
+  SwiftData (metadata) │ FileManager (artifacts)
+  Keychain (API keys)  │ Spotlight (indexing)`;
+
+const appStructure = `wawa-note/
+  App/                 WawaNoteApp.swift
+  Audio/               Capture, Playback, Session, FileWriter
+  Connectivity/        Watch session, RecordingCoordinator
+  ContextCapture/      Calendar, Location, Focus, Motion, Battery, AudioRoute
+  Domain/
+    Agent/             AgentLoop, ShellInterpreter, ShellTool, ToolContext
+    Calendar/          CalendarEvent, CalendarSyncService, Timeline, DaySummary
+    Models/            KnowledgeItem, Project, TaskItem, Person, GraphEdge, Entity
+    Services/          ContentPipeline, Search, Project, Task, Person services
+  Ecosystem/
+    Export/            MarkdownExporter, JSONExporter, ProjectExport, TaskReminders
+    Import/            ImportRouter + 10 format importers
+  LocalIntelligence/   EmbeddingService, SemanticSearchService
+  Providers/           AIProvider protocol + OpenAI, Anthropic, Gemini, DeepSeek
+  Security/            Biometric gate (Face ID)
+  Storage/             FileArtifactStore, SecureKeyStore
+  Transcription/       AppleSpeechTranscriptionEngine, RemoteTranscriptionEngine
+  UI/
+    Capture/           Scanner, Recording UI
+    Chat/              ChatView, ChatViewModel, AgentStatusBar
+    Inbox/             Universal search + triage
+    Explore/           Project explorer
+    Project/           Detail, Timeline, Graph, TaskBoard, Decisions, Entities
+    Calendar/          MonthGrid, DayActivity, OnThisDay
+    Knowledge/         Detail view, Connections
+    Settings/          Provider picker, config, templates
+    Components/        ContentView, CreationSheet, PermissionPrompt`;
+
+const providerTable = `Provider              | Status      | Notes
+────────────────────── | ─────────── | ─────
+OpenAICompatibleProvider | Primary    | OpenAI, any /v1/chat/completions endpoint
+AnthropicProvider      | Implemented | Claude models via Anthropic API
+GeminiProvider         | Implemented | Google Gemini models
+DeepSeek               | Implemented | DeepSeek models
+Local LLM              | Partial     | Model download infra ready, inference not wired yet`;
+
+const iosIntegrations = `Integration            | Direction  | Status
+────────────────────── | ────────── | ──────────
+Calendar read + sensor | IN         | Implemented
+Calendar create events | OUT        | Implemented
+Reminders export       | OUT        | Implemented
+Share Extension        | IN         | Implemented
+Format importers (10)  | IN         | Implemented
+Export (MD, JSON, CSV) | OUT        | Implemented
+Context sensors (7)    | IN         | Implemented
+Watch Connectivity     | BOTH       | Implemented
+Apple Speech transcript| IN         | Implemented
+Live Activities        | OUT        | Implemented
+Vision OCR doc scanner | IN         | Implemented
+Core Spotlight index   | OUT        | Implemented
+Contacts speaker match | IN         | Implemented
+Face ID biometric gate | INTERNAL   | Implemented
+App Intents / Siri     | —          | Not yet`;
+---
+
+<Layout
+  title="wawa-note — Documentation"
+  description="Technical documentation for wawa-note v1.0.0. Architecture, agent system, project graph, providers, and iOS integrations."
+>
+  <section class="pb-10 pt-16 sm:pt-24">
+    <p class="font-mono text-[13px] text-[#8a8a8a]">Documentation &middot; v{wawaNote.version}</p>
+    <h1 class="mt-2 text-[28px] font-medium leading-tight tracking-tight text-[#1a1a1a] sm:text-[32px]">
+      wawa-note
+    </h1>
+    <p class="mt-3 max-w-[560px] text-[15px] leading-relaxed text-[#5c5c5c]">
+      {wawaNote.description}
+    </p>
+  </section>
+
+  <!-- TOC -->
+  <nav class="pb-10" aria-label="Table of contents">
+    <h2 class="text-[13px] font-medium uppercase tracking-wider text-[#8a8a8a]">Contents</h2>
+    <ul class="mt-3 columns-2 gap-x-8 space-y-1.5">
+      <li><a href="#overview" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">Overview</a></li>
+      <li><a href="#architecture" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">Architecture</a></li>
+      <li><a href="#agent" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">Agentic chat</a></li>
+      <li><a href="#project-graph" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">Project graph</a></li>
+      <li><a href="#content-pipeline" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">Content pipeline</a></li>
+      <li><a href="#providers" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">AI providers</a></li>
+      <li><a href="#transcription" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">Transcription</a></li>
+      <li><a href="#ios-integrations" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">iOS integrations</a></li>
+      <li><a href="#import-export" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">Import &amp; export</a></li>
+      <li><a href="#security" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">Security &amp; privacy</a></li>
+      <li><a href="#on-device" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">On-device AI</a></li>
+      <li><a href="#coding-standards" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">Coding standards</a></li>
+      <li><a href="#status" class="text-[14px] text-[#5c5c5c] underline underline-offset-4 decoration-[#d4d0c8] hover:text-[#1a1a1a]">What's next</a></li>
+    </ul>
+  </nav>
+
+  <!-- Overview -->
+  <section id="overview" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">Overview</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <p>
+        wawa-note v{wawaNote.version} is a native iOS app built with Swift 6.0 and SwiftUI. It requires iOS 17+ and runs on iPhone. The project is MIT licensed and fully open source.
+      </p>
+      <p>
+        The core thesis: meeting evidence becomes reusable project memory, and project memory becomes an explorable graph with tasks, decisions, owners, and connected artifacts — all with evidence provenance tracing back to source material.
+      </p>
+      <p>
+        There are no Wawa Note servers. The app never sees your data. You bring your own API keys. You choose your AI provider. Your knowledge is portable — export everything, import freely.
+      </p>
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section id="architecture" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">Architecture</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <p>
+        The app follows a layered architecture with protocol-first boundaries. Every external dependency — AI providers, transcription engines, import/export formats, context sensors — sits behind a Swift protocol.
+      </p>
+      <div class="overflow-x-auto rounded-lg border border-[#e8e4dd] bg-white p-5">
+        <pre class="font-mono text-[12px] leading-relaxed text-[#5c5c5c]" set:html={architectureDiagram}></pre>
+      </div>
+      <p>
+        The 4-tab navigation is Capture (record, scan, import), Inbox (global search and triage), Explore (project-first workspace browser with Timeline), and Chat (agentic AI chat with tool calling).
+      </p>
+      <p class="font-mono text-[13px] text-[#8a8a8a]">
+        No backend. No SaaS. No cloud sync. No accounts.
+      </p>
+
+      <h3 class="text-[15px] font-medium text-[#1a1a1a]">Project structure</h3>
+      <div class="overflow-x-auto rounded-lg border border-[#e8e4dd] bg-white p-5">
+        <pre class="font-mono text-[11px] leading-relaxed text-[#5c5c5c]" set:html={appStructure}></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Agentic Chat -->
+  <section id="agent" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">Agentic chat</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <p>
+        The chat system uses a <strong>Shell Virtual Filesystem</strong> approach. Instead of dozens of individual AI tools, the agent has a single <span class="font-mono text-[13px]">run_command</span> tool that executes Unix-like commands: <span class="font-mono text-[13px]">ls</span>, <span class="font-mono text-[13px]">cd</span>, <span class="font-mono text-[13px]">cat</span>, <span class="font-mono text-[13px]">find</span>, <span class="font-mono text-[13px]">grep</span>, <span class="font-mono text-[13px]">mv</span>, <span class="font-mono text-[13px]">rm</span>, <span class="font-mono text-[13px]">head</span>, <span class="font-mono text-[13px]">wc</span>, <span class="font-mono text-[13px]">touch</span>, <span class="font-mono text-[13px]">echo</span>, <span class="font-mono text-[13px]">extract</span>, <span class="font-mono text-[13px]">history</span>, <span class="font-mono text-[13px]">js-eval</span>, <span class="font-mono text-[13px]">help</span>. This replaced 47 individual tool files with a single ShellInterpreter.
+      </p>
+
+      <p>Key features of the agent system:</p>
+      <ul class="space-y-1 text-[14px] text-[#5c5c5c]">
+        <li>&mdash; Context-aware conversations scoped to projects, items, or global</li>
+        <li>&mdash; Auto/Deep/Fast modes controlling how much the agent iterates</li>
+        <li>&mdash; Voice input via on-device speech recognition or Whisper API</li>
+        <li>&mdash; Markdown rendering in messages via AttributedString</li>
+        <li>&mdash; Choice prompts — numbered options become tappable buttons</li>
+        <li>&mdash; Swipe actions on task/item cards for quick status changes</li>
+        <li>&mdash; Suggestion bar on scroll-up with context-aware chips</li>
+        <li>&mdash; AgentStatusBar — compact collapsible tool call display</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Project Graph -->
+  <section id="project-graph" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">Project graph</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <p>
+        Every project has a typed graph connecting knowledge items, tasks, decisions, people, and entities. Graph edges carry provenance — each relationship is traceable to a transcript segment, note block, or external event.
+      </p>
+
+      <p>Core models in the graph system:</p>
+      <ul class="space-y-1 text-[14px] text-[#5c5c5c]">
+        <li>&mdash; <strong>KnowledgeItem</strong> — polymorphic model: meeting, note, journalEntry, webBookmark, image</li>
+        <li>&mdash; <strong>Project</strong> — container with flexible frameworks (LLM-defined schemas)</li>
+        <li>&mdash; <strong>TaskItem</strong> — status, priority, owner tracking</li>
+        <li>&mdash; <strong>Person</strong> — people mentioned across meetings and projects</li>
+        <li>&mdash; <strong>GraphEdge</strong> — typed relationship with source provenance</li>
+        <li>&mdash; <strong>Entity</strong> — systems, organizations, tools extracted from content</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Content Pipeline -->
+  <section id="content-pipeline" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">Content pipeline</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <p>
+        Every item that enters wawa-note goes through a unified pipeline: Extract → Analyze → Detect signals → Ingest. This runs automatically per item and is fully automated.
+      </p>
+      <p>The pipeline handles:</p>
+      <ul class="space-y-1 text-[14px] text-[#5c5c5c]">
+        <li>&mdash; <strong>Text extraction</strong> from audio (transcription), documents (OCR), and imported files</li>
+        <li>&mdash; <strong>Analysis</strong> via configured AI provider — structured output with summaries, entities, and decisions</li>
+        <li>&mdash; <strong>Signal detection</strong> — cross-referencing against existing project knowledge</li>
+        <li>&mdash; <strong>Ingestion</strong> — persisting extracted entities, graph edges, and metadata into SwiftData</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- AI Providers -->
+  <section id="providers" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">AI providers</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <p>
+        All AI providers implement a common protocol. Provider-specific JSON never leaks past the provider layer. Configuration is done through a JSON file (<span class="font-mono text-[13px]">Providers/ai_config.json</span>) that defines models, presets, context windows, and feature settings.
+      </p>
+
+      <div class="overflow-x-auto rounded-lg border border-[#e8e4dd] bg-white p-5">
+        <pre class="font-mono text-[12px] leading-relaxed text-[#5c5c5c]" set:html={providerTable}></pre>
+      </div>
+
+      <p>
+        A single <span class="font-mono text-[13px]">AIConfigService.shared.requestParams(for:model:)</span> call handles model presets, reasoning model detection (temperature → nil for reasoning models), feature config ceilings, and context window limits. Services only own their system/user prompts — never hardcoded parameters.
+      </p>
+    </div>
+  </section>
+
+  <!-- Transcription -->
+  <section id="transcription" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">Transcription</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <p>
+        Two transcription engines are implemented behind a common protocol:
+      </p>
+      <ul class="space-y-1 text-[14px] text-[#5c5c5c]">
+        <li>&mdash; <span class="font-mono text-[13px]">AppleSpeechTranscriptionEngine</span> — on-device, works offline, no API cost</li>
+        <li>&mdash; <span class="font-mono text-[13px]">RemoteTranscriptionEngine</span> — Whisper API via any OpenAI-compatible endpoint</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- iOS Integrations -->
+  <section id="ios-integrations" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">iOS integrations</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <div class="overflow-x-auto rounded-lg border border-[#e8e4dd] bg-white p-5">
+        <pre class="font-mono text-[11px] leading-relaxed text-[#5c5c5c]" set:html={iosIntegrations}></pre>
+      </div>
+      <p>
+        Calendar integration includes MonthGrid, DayActivity, OnThisDay, and a unified view combining EKEvent items with knowledge items on the same timeline. Seven context sensors (Calendar, AudioRoute, Location, Battery, MotionActivity, FocusMode) feed the content pipeline.
+      </p>
+    </div>
+  </section>
+
+  <!-- Import & Export -->
+  <section id="import-export" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">Import &amp; export</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <p>
+        wawa-note is designed to be a place you can enter and leave freely. Everything is portable.
+      </p>
+
+      <h3 class="text-[15px] font-medium text-[#1a1a1a]">Import (10 formats)</h3>
+      <p class="text-[14px]">
+        JSON, Markdown, ICS (calendar), SRT (subtitles), PDF, HTML, RTF, Plain Text, GitHub Issues — plus a Share Extension that accepts content from any iOS app.
+      </p>
+
+      <h3 class="text-[15px] font-medium text-[#1a1a1a]">Export</h3>
+      <p class="text-[14px]">
+        Markdown, JSON, SRT, CSV, Graph JSON. Reminders can be exported to Apple Reminders. Calendar events can be created from meetings.
+      </p>
+
+      <p>
+        Use your data anywhere — ChatGPT, Claude, Notion, Obsidian. It's yours.
+      </p>
+    </div>
+  </section>
+
+  <!-- Security -->
+  <section id="security" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">Security &amp; privacy</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <p>
+        There are no Wawa Note servers. The app never sees your data. API keys stay on your device in the iOS Keychain. All permissions are optional — the app works with reduced functionality when permissions are denied.
+      </p>
+
+      <h3 class="text-[15px] font-medium text-[#1a1a1a]">Key rules</h3>
+      <ul class="space-y-1 text-[14px] text-[#5c5c5c]">
+        <li>&mdash; API keys in Keychain only. Never in SwiftData, UserDefaults, JSON, or logs.</li>
+        <li>&mdash; Face ID biometric gate available for accessing sensitive content.</li>
+        <li>&mdash; Raw audio deletable while keeping transcript and analysis.</li>
+        <li>&mdash; Original transcript always preserved — edits saved separately.</li>
+        <li>&mdash; Provider config stores only a Keychain identifier, never the key value.</li>
+        <li>&mdash; Logs never include API keys, authorization headers, or full transcripts.</li>
+        <li>&mdash; All processing indicators show whether work is on-device or remote.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- On-device AI -->
+  <section id="on-device" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">On-device AI</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <p>
+        The infrastructure for downloading and managing local AI models is in place (<span class="font-mono text-[13px]">ModelDownloadService</span> and <span class="font-mono text-[13px]">ModelRegistry</span> exist). The planned setup:
+      </p>
+
+      <div class="overflow-x-auto rounded-lg border border-[#e8e4dd]">
+        <table class="w-full text-[13px]">
+          <thead>
+            <tr class="border-b border-[#e8e4dd] bg-[#fafaf8] text-left">
+              <th class="px-4 py-2 font-medium text-[#6b6b6b]">Model</th>
+              <th class="px-4 py-2 font-medium text-[#6b6b6b]">Size</th>
+              <th class="px-4 py-2 font-medium text-[#6b6b6b]">Purpose</th>
+            </tr>
+          </thead>
+          <tbody class="text-[#5c5c5c]">
+            <tr class="border-b border-[#e8e4dd]">
+              <td class="px-4 py-2.5 font-mono text-[#1a1a1a]">Llama 3.2 1B (Q4_K_M)</td>
+              <td class="px-4 py-2.5">~500 MB</td>
+              <td class="px-4 py-2.5">Summarization, task extraction, structured JSON output</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-2.5 font-mono text-[#1a1a1a]">EmbeddingGemma 300M (Q4_K_M)</td>
+              <td class="px-4 py-2.5">~200 MB</td>
+              <td class="px-4 py-2.5">Semantic search embeddings</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Models download from Hugging Face on first use, verified with SHA256, and stored in Application Support. The existing <span class="font-mono text-[13px]">AIProvider</span> protocol means switching between cloud and local inference requires no changes to the rest of the app. Inference via <span class="font-mono text-[13px]">swift-llama</span> (llama.cpp + Metal GPU) is not yet wired.
+      </p>
+    </div>
+  </section>
+
+  <!-- Coding Standards -->
+  <section id="coding-standards" class="pb-12">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">Coding standards</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <ul class="space-y-2 text-[14px] text-[#5c5c5c]">
+        <li>&mdash; Protocol-first boundaries. Every integration behind a protocol: <span class="font-mono text-[13px]">AIProvider</span>, <span class="font-mono text-[13px]">TranscriptionEngine</span>, <span class="font-mono text-[13px]">FormatImporter</span>, <span class="font-mono text-[13px]">ContextSensor</span>.</li>
+        <li>&mdash; Swift 6.0 concurrency: <span class="font-mono text-[13px]">async/await</span>, <span class="font-mono text-[13px]">@MainActor</span> for UI state, <span class="font-mono text-[13px]">@preconcurrency import</span> for unaudited Apple frameworks.</li>
+        <li>&mdash; All AI requests must use <span class="font-mono text-[13px]">AIConfigService.shared.requestParams(for:model:)</span> — never hardcode temperature or maxTokens.</li>
+        <li>&mdash; Provider-specific JSON stays inside the provider. App code uses internal models only.</li>
+        <li>&mdash; Provenance on every graph edge — relationships traceable to source evidence.</li>
+        <li>&mdash; SwiftData: no <span class="font-mono text-[13px]">@Relationship</span> cascade deletes. Manual recursive delete in service layer.</li>
+        <li>&mdash; Keep SwiftUI views thin. Services testable without UI. Dependency injection through initializers.</li>
+        <li>&mdash; 27 unit tests in the test target. Do not claim something works on device until tested there.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Status -->
+  <section id="status" class="pb-14">
+    <h2 class="text-[18px] font-medium text-[#1a1a1a]">What's next</h2>
+    <div class="mt-3 max-w-[560px] space-y-4 text-[15px] leading-relaxed text-[#5c5c5c]">
+      <p>
+        v{wawaNote.version} is stable and available now. Areas still in progress:
+      </p>
+
+      <ul class="space-y-1 text-[14px] text-[#5c5c5c]">
+        <li>&mdash; On-device LLM inference via swift-llama (download infra ready, inference not wired)</li>
+        <li>&mdash; Semantic search UI (EmbeddingService exists, not surfaced yet)</li>
+        <li>&mdash; Cross-reference results persisted as GraphEdges (currently ephemeral DTOs)</li>
+        <li>&mdash; Device validation on iPhone 14 Plus hardware</li>
+        <li>&mdash; App Intents / Siri integration (needs extension target)</li>
+      </ul>
+
+      <p class="text-[14px] text-[#8a8a8a]">
+        Track progress and contribute on <a href={wawaNote.github} class="underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]">GitHub</a>.
+      </p>
+
+      <div class="mt-8">
+        <a
+          href={wawaNote.github}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

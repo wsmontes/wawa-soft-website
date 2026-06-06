@@ -1,0 +1,18 @@
+---
+import { site } from "../data/site";
+---
+
+<footer class="border-t border-[#e8e4dd]">
+  <div class="mx-auto max-w-[800px] px-5 py-8">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <p class="text-[13px] text-[#8a8a8a]">
+        {site.name} &middot; {site.location} &middot; &copy; {site.year} {site.legalName}
+      </p>
+      <div class="flex items-center gap-5">
+        <a href={site.github} class="text-[13px] text-[#8a8a8a] transition-colors hover:text-[#1a1a1a]">GitHub</a>
+        <a href={site.linkedin} class="text-[13px] text-[#8a8a8a] transition-colors hover:text-[#1a1a1a]">LinkedIn</a>
+        <a href={`mailto:${site.email}`} class="text-[13px] text-[#8a8a8a] transition-colors hover:text-[#1a1a1a]">Email</a>
+      </div>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,69 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { site } from "../data/site";
+---
+
+<Layout
+  title="Open Source"
+  description="Why I build software in the open."
+>
+  <section class="pb-14 pt-16 sm:pt-24">
+    <h1 class="text-[28px] font-medium leading-tight tracking-tight text-[#1a1a1a] sm:text-[32px]">
+      Open source
+    </h1>
+  </section>
+
+  <section class="pb-14 max-w-[560px] space-y-5">
+    <p class="text-[16px] leading-relaxed text-[#5c5c5c]">
+      I installed my first Linux distribution in 1997. It was Red Hat, and I remember the feeling: here was an entire operating system built by people who wanted to solve problems because the problems were interesting, not just because there was money in solving them. Linus Torvalds was a legend to me — I had never seen his face, but I knew that Linux existed because someone decided to build something and share it.
+    </p>
+
+    <p class="text-[16px] leading-relaxed text-[#5c5c5c]">
+      What drew me to open source was not the price tag. It was the idea that software could be modified. You could take a program and shape it to your own needs. That felt like a kind of freedom that commercial software never offered.
+    </p>
+
+    <p class="text-[16px] leading-relaxed text-[#5c5c5c]">
+      But here is the honest part: I was never a strong enough programmer to contribute anything I thought was worth sharing. I spent my career between business needs and technical teams — understanding requirements, designing systems, translating what people needed into what developers could build. I could see the problems clearly, but I could not write the code to solve them on my own.
+    </p>
+
+    <p class="text-[16px] leading-relaxed text-[#5c5c5c]">
+      That changed with AI-assisted coding. For the first time, I can explain what a program needs to do — my actual skill — and have working code come out the other side. Instead of explaining requirements to a programmer, I explain them to an AI. And it works. Programs are coming out that I have wanted to build for years.
+    </p>
+
+    <p class="text-[16px] leading-relaxed text-[#5c5c5c]">
+      So open source, for me, is no longer something I just admire from a distance. It is something I can finally participate in.
+    </p>
+  </section>
+
+  <section class="pb-14 max-w-[560px]">
+    <h2 class="text-[16px] font-medium text-[#1a1a1a]">Where wawa-note fits</h2>
+
+    <p class="mt-3 text-[16px] leading-relaxed text-[#5c5c5c]">
+      wawa-note came from something I actually needed. I have meetings, I have thoughts I want to capture by speaking instead of typing, and I want AI to pull out insights from that material. But every tool that does this today wants to own the pipeline — your data, your workflow, your subscription. Even Apple's native transcription lives buried inside Notes, because a standalone transcription tool is not where the commercial interest is.
+    </p>
+
+    <p class="mt-4 text-[16px] leading-relaxed text-[#5c5c5c]">
+      So I decided to build my own. It uses APIs, it keeps the data flexible, and it works the way I want it to work. wawa-note is the first one — the first of several iPhone apps I plan to build.
+    </p>
+  </section>
+
+  <section class="pb-14 max-w-[560px]">
+    <h2 class="text-[16px] font-medium text-[#1a1a1a]">What open source means here</h2>
+
+    <p class="mt-3 text-[16px] leading-relaxed text-[#5c5c5c]">
+      It does not mean I am a purist. It means that the code is public, you can read it, you can fork it, and you can leave with your data whenever you want. No lock-in, no hidden behavior, no mandatory cloud account. You should be able to inspect the software that handles your notes and meetings. That is the baseline.
+    </p>
+
+    <div class="mt-8">
+      <a
+        href={site.github}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+        wsmontes on GitHub
+      </a>
+    </div>
+  </section>
+</Layout>

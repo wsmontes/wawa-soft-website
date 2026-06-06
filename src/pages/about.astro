@@ -1,0 +1,49 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { site } from "../data/site";
+---
+
+<Layout
+  title="About"
+  description={`${site.founder.name} — independent software developer in ${site.location}.`}
+>
+  <section class="pb-14 pt-16 sm:pt-24">
+    <h1 class="text-[28px] font-medium leading-tight tracking-tight text-[#1a1a1a] sm:text-[32px]">
+      About
+    </h1>
+  </section>
+
+  <section class="pb-14 max-w-[560px]">
+    <img
+      src="/wawa.jpeg"
+      alt={`Photo of ${site.founder.name}`}
+      class="mb-8 h-24 w-24 rounded-full object-cover grayscale"
+    />
+
+    <div class="space-y-5">
+      <p class="text-[16px] leading-relaxed text-[#5c5c5c]">
+        I'm {site.founder.name}. I'm Brazilian, from a medium-sized city in the interior of São Paulo. I moved to the capital to study at the Universidade de São Paulo, where I earned a degree in film studies. I became a cinematographer. I come from a family of engineers, and technology has been around me since I was a kid. I started programming at eight years old. I was never great at it, but I never stopped.
+      </p>
+
+      <p class="text-[16px] leading-relaxed text-[#5c5c5c]">
+        I worked in cinema for a while — here is my <a href="https://www.imdb.com/name/nm9506783/" class="underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]">IMDB page</a>. Then I moved into video on demand, right at the beginning of that industry — the early Netflix era, when the first VOD platforms were launching in Brazil. I worked actively on those early platforms and later earned a Master's degree focused on VOD. From there I drifted into software development and distributed solutions, still mostly around telecom and video.
+      </p>
+
+      <p class="text-[16px] leading-relaxed text-[#5c5c5c]">
+        When I moved to Canada, the work became more technical. Life pushed me toward business analysis — understanding requirements, mapping systems, and helping modernize legacy platforms. I work with government, with several BC ministries, and with large systems that need to evolve without breaking. I have been a consultant, I have worked for consulting firms, and now I have my own company. My day job is technology services: requirements gathering, data manipulation, system design.
+      </p>
+
+      <p class="text-[16px] leading-relaxed text-[#5c5c5c]">
+        I also have a background in data science, and I have been working directly with LLMs and AI projects for several years now.
+      </p>
+
+      <p class="text-[16px] leading-relaxed text-[#5c5c5c]">
+        In my spare time, I build software. Some people call it vibe coding, but it is not the chaotic version people complain about online. I use my experience in product development and requirements to keep the AI under control and actually deliver value. I have the privilege of not needing to charge for this work — my services business already pays the bills — so I can build things that help me and, hopefully, help other people too.
+      </p>
+
+      <p class="text-[16px] leading-relaxed text-[#5c5c5c]">
+        <a href="/wawa-note" class="underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]">wawa-note</a> is the first of those things.
+      </p>
+    </div>
+  </section>
+</Layout>

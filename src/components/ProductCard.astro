@@ -1,0 +1,53 @@
+---
+import type { Product } from "../data/products";
+
+export interface Props {
+  product: Product;
+  featured?: boolean;
+}
+const { product, featured = false } = Astro.props;
+
+const statusBadge = {
+  live: { label: "Available", class: "bg-warm-100 text-warm-700" },
+  "coming-soon": { label: "Coming Soon", class: "bg-warm-50 text-warm-600" },
+  planned: { label: "Planned", class: "bg-ink-50 text-ink-500" },
+};
+const badge = statusBadge[product.status];
+---
+
+<div class={`rounded-xl border border-ink-100 bg-white p-6 transition-all duration-150 ${product.href ? "hover:border-ink-200 hover:shadow-sm" : ""} ${featured ? "ring-1 ring-warm-200" : ""}`}>
+  <div class="flex items-start justify-between gap-4">
+    <div class="flex-1">
+      <div class="flex items-center gap-3">
+        <h3 class="text-lg font-semibold text-ink-900">{product.name}</h3>
+        <span class={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.class}`}>
+          {badge.label}
+        </span>
+      </div>
+      {product.slogan && (
+        <p class="mt-1 text-sm font-medium text-ink-500">{product.slogan}</p>
+      )}
+      <p class="mt-3 text-sm leading-relaxed text-ink-500">{product.description}</p>
+    </div>
+  </div>
+
+  <div class="mt-5 flex flex-wrap items-center gap-3">
+    {product.href && (
+      <a href={product.href} class="inline-flex items-center gap-1.5 rounded-lg bg-ink-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-ink-800">
+        Learn more
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </a>
+    )}
+    {product.github && (
+      <a href={product.github} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 px-4 py-2 text-sm font-medium text-ink-700 transition-colors hover:bg-warm-50">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+        GitHub
+      </a>
+    )}
+    {product.docs && (
+      <a href={product.docs} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-warm-600 transition-colors hover:text-warm-700">
+        Documentation
+      </a>
+    )}
+  </div>
+</div>

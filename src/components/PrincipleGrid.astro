@@ -1,0 +1,24 @@
+---
+import type { Principle } from "../data/products";
+
+export interface Props {
+  principles: Principle[];
+  columns?: 2 | 3 | 4;
+}
+const { principles, columns = 3 } = Astro.props;
+
+const gridCols = {
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-2 lg:grid-cols-3",
+  4: "sm:grid-cols-2 lg:grid-cols-4",
+};
+---
+
+<div class={`grid gap-4 ${gridCols[columns]}`}>
+  {principles.map((p) => (
+    <div class="rounded-xl border border-ink-100 bg-white p-5">
+      <h3 class="text-base font-semibold text-ink-900">{p.title}</h3>
+      <p class="mt-1.5 text-sm leading-relaxed text-ink-500">{p.description}</p>
+    </div>
+  ))}
+</div>

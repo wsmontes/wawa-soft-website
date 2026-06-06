@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://wawasoft.net/sitemap.xml
