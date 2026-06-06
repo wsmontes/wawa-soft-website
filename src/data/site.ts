@@ -4,7 +4,7 @@ export const site = {
   domain: "wawasoft.net",
   url: "https://wawasoft.net",
   description:
-    "Small open-source tools for notes, meetings, documents, and personal knowledge work. Built in Victoria, BC.",
+    "Independent open-source software. Built in Victoria, BC. A proudly Canadian company.",
   location: "Victoria, British Columbia",
   email: "wawasoftbc@gmail.com",
   linkedin: "https://www.linkedin.com/in/wsmontes/",
