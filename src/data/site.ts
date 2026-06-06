@@ -6,7 +6,7 @@ export const site = {
   description:
     "Small open-source tools for notes, meetings, documents, and personal knowledge work. Built in Victoria, BC.",
   location: "Victoria, British Columbia",
-  email: "wmontes@gmail.com",
+  email: "wawasoftbc@gmail.com",
   linkedin: "https://www.linkedin.com/in/wsmontes/",
   github: "https://github.com/wsmontes",
   founder: {
