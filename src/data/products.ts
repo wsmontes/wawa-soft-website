@@ -1,5 +1,7 @@
 export const feedmine = {
   name: "Feedmine",
+  summary:
+    "A calmer iOS reader for RSS, podcasts, YouTube, and local news around the world.",
   description:
     "A native iOS news and podcast reader that turns RSS, Atom, JSON Feed, podcasts, and YouTube channels into a calmer, source-first feed. It ships with a global catalog of 61,000+ sources across 190+ countries, local search, bookmarks, and exportable collections.",
   github: "https://github.com/wsmontes/feedmine",
@@ -14,6 +16,8 @@ export const feedmine = {
 export const wawaNote = {
   name: "wawa-note",
   version: "1.0.0",
+  summary:
+    "An open-source AI workspace for meeting evidence, project memory, tasks, and decisions.",
   description:
     "A free, open-source AI workspace that captures meeting evidence — audio, scans, links, notes — and turns it into a searchable project knowledge store with tasks, decisions, and typed relationships. Agentic AI chat navigates your knowledge like a filesystem.",
   github: "https://github.com/wsmontes/wawa-note-ios",

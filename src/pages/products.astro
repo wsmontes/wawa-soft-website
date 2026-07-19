@@ -22,43 +22,39 @@ import { products } from "../data/products";
         <article class="rounded-lg border border-[#e8e4dd] p-6">
           <div class="flex items-start gap-4">
             <img src={product.icon} alt="" class="mt-1 h-10 w-10 shrink-0 rounded-md" />
-            <div>
-              <div class="flex flex-wrap items-center gap-3">
-                <h2 class="text-[18px] font-medium text-[#1a1a1a]">{product.name}</h2>
-                <span class="rounded-full bg-[#f0ede7] px-2.5 py-0.5 font-mono text-[11px] text-[#6b6b6b]">
-                  {product.status}
-                </span>
-              </div>
-              <p class="mt-2 max-w-[560px] text-[15px] leading-relaxed text-[#5c5c5c]">
-                {product.description}
+            <div class="min-w-0 flex-1">
+              <h2 class="text-[18px] font-medium text-[#1a1a1a]">{product.name}</h2>
+              <p class="mt-1 font-mono text-[12px] text-[#8a8a8a]">{product.status}</p>
+              <p class="mt-3 max-w-[560px] text-[15px] leading-relaxed text-[#5c5c5c]">
+                {product.summary}
               </p>
-              <dl class="mt-4 grid gap-2 text-[13px] text-[#6b6b6b] sm:grid-cols-2">
-                <div>
-                  <dt class="font-mono uppercase tracking-wider text-[#8a8a8a]">Platform</dt>
-                  <dd class="mt-0.5 text-[#1a1a1a]">{product.platforms}</dd>
-                </div>
-                <div>
-                  <dt class="font-mono uppercase tracking-wider text-[#8a8a8a]">License</dt>
-                  <dd class="mt-0.5 text-[#1a1a1a]">{product.license}</dd>
-                </div>
-              </dl>
-              <div class="mt-5 flex flex-wrap gap-3">
-                <a
-                  href={product.href}
-                  class="text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]"
-                >
-                  Learn more &rarr;
-                </a>
-                <a
-                  href={product.github}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]"
-                >
-                  Repository &rarr;
-                </a>
+              <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-[#6b6b6b]">
+                <p>
+                  <span class="font-mono uppercase tracking-wider text-[#8a8a8a]">Platform</span>
+                  <span class="ml-2 text-[#1a1a1a]">{product.platforms}</span>
+                </p>
+                <p>
+                  <span class="font-mono uppercase tracking-wider text-[#8a8a8a]">License</span>
+                  <span class="ml-2 text-[#1a1a1a]">{product.license}</span>
+                </p>
               </div>
             </div>
+          </div>
+          <div class="mt-5 flex flex-wrap gap-3 sm:pl-14">
+            <a
+              href={product.href}
+              class="text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]"
+            >
+              Learn more &rarr;
+            </a>
+            <a
+              href={product.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]"
+            >
+              Repository &rarr;
+            </a>
           </div>
         </article>
       ))}
