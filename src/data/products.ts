@@ -1,3 +1,16 @@
+export const feedmine = {
+  name: "Feedmine",
+  description:
+    "A native iOS news and podcast reader that turns RSS, Atom, JSON Feed, podcasts, and YouTube channels into a calmer, source-first feed. It ships with a global catalog of 61,000+ sources across 190+ countries, local search, bookmarks, and exportable collections.",
+  github: "https://github.com/wsmontes/feedmine",
+  status: "in development — iOS app",
+  platforms: "iOS 18+",
+  license: "Proprietary",
+  href: "/feedmine",
+  icon: "/feedmine-symbol.png",
+  wordmark: "/feedmine-wordmark.png",
+};
+
 export const wawaNote = {
   name: "wawa-note",
   version: "1.0.0",
@@ -7,7 +20,11 @@ export const wawaNote = {
   status: "v1.0.0 — available now",
   platforms: "iOS 17+",
   license: "MIT",
+  href: "/wawa-note",
+  icon: "/symbol-gradient.png",
 };
+
+export const products = [feedmine, wawaNote];
 
 export const principles = [
   {
@@ -48,5 +65,31 @@ export const wawaNoteSections = [
   {
     title: "Current status",
     body: "wawa-note v1.0.0 is available on GitHub. It runs on iOS 17+, built with Swift 6.0 and SwiftUI. The core loop — capture, analyze, organize, chat — is fully functional. New features like on-device LLM inference and deeper Apple ecosystem integrations are in progress.",
+  },
+];
+
+export const feedmineStats = [
+  { label: "Sources", value: "61,000+" },
+  { label: "Countries", value: "190+" },
+  { label: "OPML files", value: "4,534" },
+  { label: "Catalog nodes", value: "12,607" },
+];
+
+export const feedmineSections = [
+  {
+    title: "What it is",
+    body: "Feedmine is a source-first reader for iPhone. It brings articles, podcasts, and YouTube channels into one feed without making the algorithm the main character. You choose the sources, topics, countries, and collections. Feedmine does the fetching, parsing, filtering, saving, and exporting.",
+  },
+  {
+    title: "What it does",
+    body: "The app reads RSS, Atom, JSON Feed, podcast feeds, YouTube channel feeds, and pasted links. It includes a large prebuilt catalog, local full-text search, bookmarks, custom lists, saved searches, an in-app reader, OPML import/export, and a scheduler that keeps the feed diverse instead of letting one loud source take over.",
+  },
+  {
+    title: "Why I'm building it",
+    body: "News discovery has moved into feeds that optimize for retention, outrage, and platform control. I wanted a reader that points back to publishers, makes local and global sources easier to find, and lets people build their own information diet without accounts, ads, or a black-box ranking system.",
+  },
+  {
+    title: "Current status",
+    body: "Feedmine is in active development. The app has its main SwiftUI experience, feed engine, SQLite catalog, local search, bookmarks, import pipeline, export tools, and brand system in place. The remaining work is focused on stability, onboarding, dark mode, and App Store polish.",
   },
 ];

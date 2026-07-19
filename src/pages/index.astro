@@ -1,50 +1,60 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { site } from "../data/site";
-import { wawaNote, principles } from "../data/products";
+import { products, principles } from "../data/products";
 ---
 
 <Layout title={site.name} description={site.description}>
   <!-- Intro -->
   <section class="pb-14 pt-16 sm:pt-24">
     <p class="max-w-[560px] text-[16px] leading-relaxed text-[#5c5c5c]">
-      Independent open-source software.<br />
+      Independent software.<br />
+      Open source when possible.<br />
       A proudly Canadian company.<br />
       Built in Victoria, BC.
     </p>
   </section>
 
-  <!-- Current project -->
+  <!-- Products -->
   <section class="pb-14">
     <h2 class="text-[13px] font-medium uppercase tracking-wider text-[#8a8a8a]">
-      Current project
+      Products
     </h2>
-    <div class="mt-4 rounded-lg border border-[#e8e4dd] p-6">
-      <h3 class="text-[18px] font-medium text-[#1a1a1a]">
-        {wawaNote.name}
-      </h3>
-      <p class="mt-2 max-w-[560px] text-[15px] leading-relaxed text-[#5c5c5c]">
-        {wawaNote.description}
-      </p>
-      <p class="mt-3 font-mono text-[13px] text-[#8a8a8a]">
-        {wawaNote.status}
-      </p>
-      <div class="mt-5 flex flex-wrap gap-3">
-        <a
-          href="/wawa-note"
-          class="text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]"
-        >
-          Learn more &rarr;
-        </a>
-        <a
-          href={wawaNote.github}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]"
-        >
-          Source code &rarr;
-        </a>
-      </div>
+    <div class="mt-4 grid gap-4">
+      {products.map((product) => (
+        <article class="rounded-lg border border-[#e8e4dd] p-6">
+          <div class="flex items-start gap-4">
+            <img src={product.icon} alt="" class="mt-1 h-10 w-10 shrink-0 rounded-md" />
+            <div>
+              <h3 class="text-[18px] font-medium text-[#1a1a1a]">
+                {product.name}
+              </h3>
+              <p class="mt-2 max-w-[560px] text-[15px] leading-relaxed text-[#5c5c5c]">
+                {product.description}
+              </p>
+              <p class="mt-3 font-mono text-[13px] text-[#8a8a8a]">
+                {product.status}
+              </p>
+              <div class="mt-5 flex flex-wrap gap-3">
+                <a
+                  href={product.href}
+                  class="text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]"
+                >
+                  Learn more &rarr;
+                </a>
+                <a
+                  href={product.github}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]"
+                >
+                  Repository &rarr;
+                </a>
+              </div>
+            </div>
+          </div>
+        </article>
+      ))}
     </div>
   </section>
 
