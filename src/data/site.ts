@@ -19,6 +19,7 @@ export const navigation = [
   { label: "Feedmine", href: "/feedmine" },
   { label: "wawa-note", href: "/wawa-note" },
   { label: "open source", href: "/open-source" },
+  { label: "blog", href: "/blog" },
   { label: "about", href: "/about" },
   { label: "contact", href: "/contact" },
 ];

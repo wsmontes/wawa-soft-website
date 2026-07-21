@@ -7,9 +7,13 @@ import { site } from "../data/site";
 export interface Props {
   title: string;
   description: string;
+  type?: "website" | "article";
+  publishedTime?: Date;
+  image?: string;
 }
-const { title, description } = Astro.props;
+const { title, description, type = "website", publishedTime, image } = Astro.props;
 const fullTitle = `${title} — ${site.name}`;
+const socialImage = image ? new URL(image, site.url).href : undefined;
 ---
 
 <!doctype html>
@@ -25,15 +29,25 @@ const fullTitle = `${title} — ${site.name}`;
 
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={type} />
     <meta property="og:url" content={new URL(Astro.url.pathname, site.url).href} />
     <meta property="og:site_name" content={site.name} />
+    {publishedTime && <meta property="article:published_time" content={publishedTime.toISOString()} />}
+    {socialImage && <meta property="og:image" content={socialImage} />}
+    {socialImage && <meta property="og:image:alt" content={`${site.name} Blog`} />}
 
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content={socialImage ? "summary_large_image" : "summary"} />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
+    {socialImage && <meta name="twitter:image" content={socialImage} />}
 
     <link rel="canonical" href={new URL(Astro.url.pathname, site.url).href} />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={`${site.name} Blog`}
+      href={new URL("/rss.xml", site.url).href}
+    />
   </head>
   <body class="min-h-screen bg-[#fafaf8] text-[#1a1a1a] antialiased">
     <Header />
