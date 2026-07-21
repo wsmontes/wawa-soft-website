@@ -64,12 +64,51 @@ import { feedmine, feedmineSections, feedmineStats } from "../data/products";
     <div class="mt-4 grid gap-3 sm:grid-cols-4">
       {feedmineStats.map((stat) => (
         <div class="rounded-lg border border-[#e8e4dd] p-4">
-          <p class="text-[22px] font-medium text-[#1a1a1a]">{stat.value}</p>
+          <p data-catalog-stat={stat.label} class="text-[22px] font-medium text-[#1a1a1a]" aria-live="polite">{stat.value}</p>
           <p class="mt-1 text-[13px] text-[#6b6b6b]">{stat.label}</p>
         </div>
       ))}
     </div>
   </section>
+
+  <script>
+    const manifestUrl = "https://raw.githubusercontent.com/wawasoft/feedmine-repo/main/manifest.json";
+
+    type CatalogManifest = {
+      sourceCount?: number;
+      fileCount?: number;
+      files?: Array<{ path?: string }>;
+    };
+
+    async function updateCatalogStats() {
+      try {
+        const response = await fetch(manifestUrl, { cache: "no-store" });
+        if (!response.ok) return;
+
+        const manifest = (await response.json()) as CatalogManifest;
+        if (!Array.isArray(manifest.files)) return;
+
+        const countryCount = manifest.files.filter((file) =>
+          file.path?.includes("90_countries/")
+        ).length;
+        const stats: Record<string, string> = {
+          Sources: typeof manifest.sourceCount === "number" ? manifest.sourceCount.toLocaleString() : "",
+          Countries: countryCount.toString(),
+          "OPML files": typeof manifest.fileCount === "number" ? manifest.fileCount.toString() : "",
+          Topics: typeof manifest.fileCount === "number" ? (manifest.fileCount - countryCount).toString() : "",
+        };
+
+        document.querySelectorAll<HTMLElement>("[data-catalog-stat]").forEach((element) => {
+          const value = stats[element.dataset.catalogStat ?? ""];
+          if (value) element.textContent = value;
+        });
+      } catch {
+        // Keep the catalog snapshot bundled with the site when GitHub is unavailable.
+      }
+    }
+
+    void updateCatalogStats();
+  </script>
 
   <!-- Sections -->
   <div class="space-y-10 pb-6">
