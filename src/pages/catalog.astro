@@ -8,13 +8,8 @@ import Layout from "../layouts/Layout.astro";
 >
   <div id="catalog-root" class="pb-16 pt-8">
     <!-- Breadcrumb -->
-    <a
-      href="/feedmine"
-      class="inline-flex items-center gap-1 text-[13px] text-[#6b6b6b] transition-colors hover:text-[#1a1a1a]"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      FeedMine Catalog
-    </a>
+    <nav id="catalog-breadcrumb" aria-label="Breadcrumb" class="text-[13px] text-[#6b6b6b]">
+    </nav>
 
     <!-- Loading state -->
     <div id="catalog-loading" class="mt-8">
@@ -260,7 +255,7 @@ import Layout from "../layouts/Layout.astro";
     currentView = "country";
     currentIndices = country.docs;
     currentContext = country.k;
-    breadcrumb(`Catalog > Countries > ${escapeHtml(country.k)}`);
+    breadcrumb([{ label: "Catalog", action: restoreBrowseView }, { label: "Countries" }, { label: country.k }]);
     renderFeedCards(country.docs, getFilters(), country.k);
   }
 
@@ -274,7 +269,7 @@ import Layout from "../layouts/Layout.astro";
     }));
     const total = items.reduce((sum, item) => sum + item.filtered.length, 0);
 
-    breadcrumb(`Catalog > ${escapeHtml(topic.k)}`);
+    breadcrumb([{ label: "Catalog", action: restoreBrowseView }, { label: topic.k }]);
 
     if (total === 0) {
       renderEmpty("No sources match your search/filters.");
@@ -313,7 +308,7 @@ import Layout from "../layouts/Layout.astro";
     currentView = "subcategory";
     currentIndices = sub.docs;
     currentContext = sub.k;
-    breadcrumb(`Catalog > ${escapeHtml(topic.k)} > ${escapeHtml(sub.k)}`);
+    breadcrumb([{ label: "Catalog", action: restoreBrowseView }, { label: topic.k, action: () => selectTopic(topic) }, { label: sub.k }]);
     renderFeedCards(sub.docs, getFilters(), sub.k);
   }
 
@@ -384,7 +379,7 @@ import Layout from "../layouts/Layout.astro";
     } else {
       renderSearchResults(results);
     }
-    breadcrumb(`Catalog > Search: &quot;${escapeHtml(query)}&quot;`);
+    breadcrumb([{ label: "Catalog", action: restoreBrowseView }, { label: `Search: "${query}"` }]);
     updateResultsCount(results.length, `&middot; results for &quot;${escapeHtml(query)}&quot;`);
   }
 
@@ -393,7 +388,7 @@ import Layout from "../layouts/Layout.astro";
     currentIndices = [];
     currentTopic = null;
     currentContext = "";
-    breadcrumb("Catalog");
+    breadcrumb([{ label: "Catalog" }]);
     resultsListEl.innerHTML =
       `<p class="text-[14px] leading-relaxed text-[#5c5c5c]">Choose a topic or country to start browsing, or search the catalog.</p>`;
     updateResultsCount();
@@ -433,9 +428,29 @@ import Layout from "../layouts/Layout.astro";
     resultsCountEl.innerHTML = `Showing ${count.toLocaleString()} sources${context ? ` ${context}` : ""}`;
   }
 
-  function breadcrumb(text: string) {
-    currentBreadcrumb = text;
-    resultsHeaderEl.innerHTML = `<h2 class="text-[15px] font-medium text-[#1a1a1a]">${text}</h2>`;
+  const breadcrumbEl = document.getElementById("catalog-breadcrumb")!;
+
+  /** breadcrumb segments: [{label}] — last segment is plain text, earlier ones are clickable links */
+  function breadcrumb(segments: Array<{ label: string; action?: () => void }>) {
+    currentBreadcrumb = segments.map((s) => s.label).join(" > ");
+    breadcrumbEl.innerHTML = segments
+      .map((seg, i) => {
+        const isLast = i === segments.length - 1;
+        if (isLast || !seg.action) {
+          return `<span class="text-[#1a1a1a]">${escapeHtml(seg.label)}</span>`;
+        }
+        return `<a href="#" class="underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]" data-bc-action="${i}">${escapeHtml(seg.label)}</a>`;
+      })
+      .join(` <span aria-hidden="true" class="text-[#d4d0c8]">&gt;</span> `);
+    // Wire click handlers for the link segments
+    breadcrumbEl.querySelectorAll<HTMLAnchorElement>("[data-bc-action]").forEach((link) => {
+      const idx = parseInt(link.dataset.bcAction ?? "", 10);
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const seg = segments[idx];
+        if (seg?.action) seg.action();
+      });
+    });
   }
 
   // --- Utils ---

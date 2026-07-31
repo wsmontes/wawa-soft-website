@@ -133,7 +133,10 @@ export function searchDocs(
 export function commonLanguages(docs: DocEntry[]): string[] {
   const counts = new Map<string, number>();
   for (const doc of docs) {
-    counts.set(doc.l, (counts.get(doc.l) ?? 0) + 1);
+    const lang = doc.l.trim();
+    if (!lang) continue;
+    const key = lang.toUpperCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return [...counts.entries()]
     .sort((a, b) => b[1] - a[1])
