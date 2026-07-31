@@ -134,22 +134,36 @@ export function applyFilters(
 
 /**
  * Full-text search intersecting with active filters.
- * Returns matching DocEntry objects (not IndexedDoc) for uniform rendering.
+ * Returns matching DocEntry objects with match terms for highlighting.
  */
+export interface SearchResult {
+  docs: DocEntry[];
+  matchTerms: Map<number, string[]>; // doc index → matched terms
+}
+
 export function searchAndFilter(
   query: string,
   engine: MiniSearch<IndexedDoc>,
   docs: DocEntry[],
   filters: FilterState,
-): DocEntry[] {
+): SearchResult {
+  const matchTerms = new Map<number, string[]>();
+
   if (!query.trim()) {
-    return applyFilters(docs, filters);
+    const filtered = applyFilters(docs, filters);
+    return { docs: filtered, matchTerms };
   }
 
   const results = engine.search(query, { prefix: true, fuzzy: 0.2 });
-  const matchedIds = new Set(results.map((r) => r.id as number));
+  const matchedIds = new Map<number, string[]>();
+  for (const r of results) {
+    const id = r.id as number;
+    const terms = Object.keys(r.match ?? {});
+    const existing = matchedIds.get(id) ?? [];
+    matchedIds.set(id, [...existing, ...terms]);
+  }
 
-  return docs.filter((doc, i) => {
+  const filtered = docs.filter((doc, i) => {
     if (!matchedIds.has(i)) return false;
     if (filters.topic && doc.tp !== filters.topic) return false;
     if (filters.subcategory && doc.sc !== filters.subcategory) return false;
@@ -157,8 +171,25 @@ export function searchAndFilter(
     if (filters.mediaKind && doc.m !== filters.mediaKind) return false;
     if (filters.language && doc.l.toUpperCase() !== filters.language.toUpperCase()) return false;
     if (filters.activity && doc.a !== filters.activity) return false;
+    matchTerms.set(i, matchedIds.get(i)!);
     return true;
   });
+
+  return { docs: filtered, matchTerms };
+}
+
+/** Highlight matched terms in text by wrapping them in <mark> tags. */
+export function highlightMatches(text: string, terms: string[]): string {
+  if (!terms.length) return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const escaped = terms
+    .filter((t) => t.length > 0)
+    .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (!escaped.length) return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+  return text
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(regex, "<mark class=\"bg-[#fef3c7] text-[#1a1a1a] rounded-sm\">$1</mark>");
 }
 
 /** Paginate results. Returns the slice and total count. */

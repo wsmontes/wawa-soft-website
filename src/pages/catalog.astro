@@ -133,6 +133,7 @@ import Layout from "../layouts/Layout.astro";
     buildDocCountryMap,
     applyFilters,
     searchAndFilter,
+    highlightMatches,
     paginate,
     facetCounts,
     emptyFilters,
@@ -150,6 +151,7 @@ import Layout from "../layouts/Layout.astro";
   let currentPage = 1;
   let perPage = 50;
   let currentResults: DocEntry[] = [];
+  let matchTerms: Map<number, string[]> = new Map();
   let sortOrder = ""; // "" | "az" | "za"
 
   // --- DOM refs ---
@@ -196,6 +198,7 @@ import Layout from "../layouts/Layout.astro";
       docCountryMap = buildDocCountryMap(indexData.countries);
       for (let i = 0; i < docs.length; i++) {
         (docs[i] as any)._co = docCountryMap.get(i) ?? "";
+        (docs[i] as any)._idx = i;
       }
       engine = createSearchEngine(docs);
 
@@ -407,7 +410,9 @@ import Layout from "../layouts/Layout.astro";
 
   function applyAndRender() {
     const query = searchInput.value;
-    let results = searchAndFilter(query, engine, docs, filters);
+    const searchResult = searchAndFilter(query, engine, docs, filters);
+    let results = searchResult.docs;
+    matchTerms = searchResult.matchTerms;
 
     // Sort
     if (sortOrder === "az") {
@@ -488,34 +493,70 @@ import Layout from "../layouts/Layout.astro";
       return;
     }
     resultsListEl.innerHTML = items.map(feedCard).join("");
+    // Wire copy-link buttons
+    resultsListEl.querySelectorAll<HTMLButtonElement>("[data-copy-link]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const sourceId = btn.getAttribute("data-copy-link")!;
+        const url = `${window.location.origin}/feed?sourceId=${sourceId}`;
+        navigator.clipboard.writeText(url).then(() => {
+          btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+          setTimeout(() => {
+            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+          }, 1500);
+        }).catch(() => {});
+      });
+    });
   }
 
   function feedCard(doc: DocEntry): string {
-    const description = escapeHtml(doc.d).trim();
+    const docIdx = (doc as any)._idx as number;
+    const terms = matchTerms.get(docIdx) ?? [];
+    const title = highlightMatches(doc.t, terms);
+    const description = doc.d.trim();
     const hasDesc = description.length > 0;
-    const truncated = hasDesc ? description.substring(0, 140) + (description.length > 140 ? "…" : "") : "";
+    const descHighlighted = hasDesc ? highlightMatches(description, terms) : "";
+    const truncated = hasDesc
+      ? (description.length > 140
+          ? highlightMatches(description.substring(0, 140), terms) + "…"
+          : descHighlighted)
+      : "";
+
+    // Color-coded left border by media type
+    const borderColor = doc.m === "audio" ? "border-l-blue-400" : doc.m === "video" ? "border-l-red-400" : "border-l-amber-400";
+    const borderClass = `border-l-2 ${borderColor}`;
 
     return `
-      <a href="/feed?sourceId=${escapeAttr(doc.s)}"
-         class="group block rounded-lg border border-[#e8e4dd] p-3 transition-colors hover:border-[#c4bfb4] hover:bg-white">
-        <div class="flex items-start gap-3">
-          <span class="mt-0.5 shrink-0 text-[#8a8a8a] group-hover:text-[#6b6b6b] transition-colors">
-            ${mediaBadge(doc.m)}
-          </span>
-          <div class="min-w-0 flex-1">
-            <span class="block truncate text-[14px] font-medium text-[#1a1a1a]">${escapeHtml(doc.t)}</span>
-            <span class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-[#6b6b6b]">
-              <span class="font-mono text-[11px] uppercase text-[#8a8a8a]">${escapeHtml(doc.l)}</span>
-              <span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span>
-              ${escapeHtml(doc.sc || doc.tp)}
-              ${(doc as any)._co ? `<span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span> ${escapeHtml((doc as any)._co)}` : ""}
-              <span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span>
-              ${escapeHtml(activityLabel(doc.a))}
+      <div class="group relative rounded-lg border border-[#e8e4dd] ${borderClass} bg-white p-3 transition-colors hover:border-[#c4bfb4] hover:shadow-sm">
+        <a href="/feed?sourceId=${escapeAttr(doc.s)}" class="block">
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 shrink-0 text-[#8a8a8a] group-hover:text-[#6b6b6b] transition-colors">
+              ${mediaBadge(doc.m)}
             </span>
-            ${hasDesc ? `<span class="mt-1 block text-[13px] leading-relaxed text-[#5c5c5c]">${truncated}</span>` : ""}
+            <div class="min-w-0 flex-1">
+              <span class="block text-[14px] font-medium leading-snug text-[#1a1a1a]">${title}</span>
+              <span class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-[#6b6b6b]">
+                <span class="font-mono text-[10px] uppercase tracking-wider text-[#8a8a8a]">${escapeHtml(doc.l)}</span>
+                <span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span>
+                ${escapeHtml(doc.sc || doc.tp)}
+                ${(doc as any)._co ? `<span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span> ${escapeHtml((doc as any)._co)}` : ""}
+                <span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span>
+                ${escapeHtml(activityLabel(doc.a))}
+              </span>
+              ${hasDesc ? `<span class="mt-1 block text-[13px] leading-relaxed text-[#5c5c5c]">${truncated}</span>` : ""}
+            </div>
           </div>
-        </div>
-      </a>`;
+        </a>
+        <button
+          data-copy-link="${escapeAttr(doc.s)}"
+          class="absolute right-2 top-2 hidden rounded p-1 text-[#8a8a8a] opacity-0 transition-all hover:bg-[#f5f3ef] hover:text-[#1a1a1a] group-hover:opacity-100 sm:inline-flex"
+          aria-label="Copy link to ${escapeAttr(doc.t)}"
+          title="Copy link"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>`;
   }
 
   // --- Pagination ---
