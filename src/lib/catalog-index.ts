@@ -165,13 +165,14 @@ export function searchAndFilter(
 export function paginate(
   docs: DocEntry[],
   page: number,
+  perPage: number = PER_PAGE,
 ): { items: DocEntry[]; total: number; pages: number; page: number } {
   const total = docs.length;
-  const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const pages = Math.max(1, Math.ceil(total / perPage));
   const clampedPage = Math.max(1, Math.min(page, pages));
-  const start = (clampedPage - 1) * PER_PAGE;
+  const start = (clampedPage - 1) * perPage;
   return {
-    items: docs.slice(start, start + PER_PAGE),
+    items: docs.slice(start, start + perPage),
     total,
     pages,
     page: clampedPage,

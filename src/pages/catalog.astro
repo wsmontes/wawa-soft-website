@@ -7,16 +7,16 @@ import Layout from "../layouts/Layout.astro";
   description="Browse, search, and explore 43,000+ feeds in the FeedMine catalog."
 >
   <div id="catalog-root" class="pb-16 pt-8">
-    <!-- Static heading while loading -->
+    <!-- Heading -->
     <h1 class="text-[15px] font-medium text-[#1a1a1a]" id="catalog-heading">Catalog</h1>
 
     <!-- Loading state -->
     <div id="catalog-loading" class="mt-6">
       <div class="animate-pulse space-y-3">
         <div class="h-10 w-full rounded-lg bg-[#e8e4dd]"></div>
-        <div class="h-5 w-64 rounded bg-[#e8e4dd]"></div>
+        <div class="h-5 w-72 rounded bg-[#e8e4dd]"></div>
       </div>
-      <p class="mt-4 text-[14px] text-[#8a8a8a]" id="catalog-loading-text">Loading catalog...</p>
+      <p class="mt-4 text-[14px] text-[#8a8a8a]" id="catalog-loading-text">Loading catalog&hellip;</p>
     </div>
 
     <!-- Error state -->
@@ -27,22 +27,39 @@ import Layout from "../layouts/Layout.astro";
 
     <!-- Main content (hidden until loaded) -->
     <div id="catalog-main" class="mt-6 hidden">
-      <!-- Search bar -->
-      <input
-        id="catalog-search"
-        type="text"
-        placeholder="Search sources, topics, keywords..."
-        class="w-full rounded-lg border border-[#d4d0c8] bg-white px-4 py-2.5 text-[14px] text-[#1a1a1a] placeholder:text-[#8a8a8a] outline-none transition-colors focus:border-[#b0aba0]"
-      />
+      <!-- Toolbar: search + sort + per-page -->
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <div class="relative flex-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8a8a8a] pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input
+            id="catalog-search"
+            type="text"
+            placeholder="Search 43,000+ sources&hellip;"
+            class="w-full rounded-lg border border-[#d4d0c8] bg-white py-2.5 pl-10 pr-4 text-[14px] text-[#1a1a1a] placeholder:text-[#8a8a8a] outline-none transition-colors focus:border-[#b0aba0]"
+          />
+          <kbd class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden rounded border border-[#d4d0c8] px-1.5 py-0.5 text-[11px] text-[#8a8a8a] sm:inline-block">/</kbd>
+        </div>
+        <div class="flex gap-2">
+          <select id="catalog-sort" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-2 text-[13px] text-[#1a1a1a] outline-none">
+            <option value="">Sort: Default</option>
+            <option value="az">Name A&ndash;Z</option>
+            <option value="za">Name Z&ndash;A</option>
+          </select>
+          <select id="catalog-perpage" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-2 text-[13px] text-[#1a1a1a] outline-none">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+      </div>
 
       <!-- Active filter chips -->
       <div id="catalog-chips" class="mt-3 flex flex-wrap items-center gap-2"></div>
 
       <!-- Two-column layout -->
-      <div class="mt-6 flex flex-col gap-8 sm:flex-row">
+      <div class="mt-5 flex flex-col gap-8 sm:flex-row">
         <!-- Sidebar: facets -->
         <aside class="w-full shrink-0 sm:w-[220px]">
-          <!-- Mobile toggle -->
           <button id="sidebar-toggle" type="button"
             class="mb-3 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef] sm:hidden"
             aria-expanded="false" aria-controls="sidebar-facets">
@@ -51,33 +68,38 @@ import Layout from "../layouts/Layout.astro";
           </button>
 
           <div id="sidebar-facets" class="hidden space-y-5 sm:block">
-            <!-- Topics accordion -->
             <details open id="facet-topics" class="group">
-              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">Topics</summary>
+              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">
+                Topics <span id="facet-topics-badge" class="font-normal text-[#8a8a8a]"></span>
+              </summary>
               <div id="facet-topics-list" class="mt-1.5 max-h-[320px] space-y-0.5 overflow-y-auto"></div>
             </details>
 
-            <!-- Countries accordion -->
             <details id="facet-countries" class="group">
-              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">Countries</summary>
+              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">
+                Countries <span id="facet-countries-badge" class="font-normal text-[#8a8a8a]"></span>
+              </summary>
               <div id="facet-countries-list" class="mt-1.5 max-h-[260px] space-y-0.5 overflow-y-auto"></div>
             </details>
 
-            <!-- Media accordion -->
             <details id="facet-media" class="group">
-              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">Media</summary>
+              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">
+                Media <span id="facet-media-badge" class="font-normal text-[#8a8a8a]"></span>
+              </summary>
               <div id="facet-media-list" class="mt-1.5 space-y-0.5"></div>
             </details>
 
-            <!-- Language accordion -->
             <details id="facet-language" class="group">
-              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">Language</summary>
+              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">
+                Language <span id="facet-language-badge" class="font-normal text-[#8a8a8a]"></span>
+              </summary>
               <div id="facet-language-list" class="mt-1.5 max-h-[260px] space-y-0.5 overflow-y-auto"></div>
             </details>
 
-            <!-- Activity accordion -->
             <details id="facet-activity" class="group">
-              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">Activity</summary>
+              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">
+                Activity <span id="facet-activity-badge" class="font-normal text-[#8a8a8a]"></span>
+              </summary>
               <div id="facet-activity-list" class="mt-1.5 space-y-0.5"></div>
             </details>
           </div>
@@ -85,12 +107,12 @@ import Layout from "../layouts/Layout.astro";
 
         <!-- Results -->
         <main class="min-w-0 flex-1">
-          <div id="results-header" class="mb-3 flex items-center justify-between gap-4">
+          <div id="results-header" class="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p id="results-count-top" class="text-[13px] text-[#8a8a8a]"></p>
             <nav id="results-pages-top" class="flex items-center gap-1 text-[13px]"></nav>
           </div>
-          <div id="results-list" class="space-y-2"></div>
-          <div id="results-footer" class="mt-5 flex items-center justify-between gap-4">
+          <div id="results-list" class="space-y-1.5"></div>
+          <div id="results-footer" class="mt-5 flex flex-wrap items-center justify-between gap-2">
             <p id="results-count" class="text-[13px] text-[#8a8a8a]"></p>
             <nav id="results-pages" class="flex items-center gap-1 text-[13px]"></nav>
           </div>
@@ -122,7 +144,9 @@ import Layout from "../layouts/Layout.astro";
   let indexData: import("../lib/catalog-index").CatalogIndex;
   let filters: FilterState = emptyFilters();
   let currentPage = 1;
+  let perPage = 50;
   let currentResults: DocEntry[] = [];
+  let sortOrder = ""; // "" | "az" | "za"
 
   // --- DOM refs ---
   const loadingEl = document.getElementById("catalog-loading")!;
@@ -132,6 +156,8 @@ import Layout from "../layouts/Layout.astro";
   const mainEl = document.getElementById("catalog-main")!;
   const headingEl = document.getElementById("catalog-heading")!;
   const searchInput = document.getElementById("catalog-search") as HTMLInputElement;
+  const sortSelect = document.getElementById("catalog-sort") as HTMLSelectElement;
+  const perPageSelect = document.getElementById("catalog-perpage") as HTMLSelectElement;
   const chipsEl = document.getElementById("catalog-chips")!;
   const resultsListEl = document.getElementById("results-list")!;
   const resultsCountEl = document.getElementById("results-count")!;
@@ -144,15 +170,18 @@ import Layout from "../layouts/Layout.astro";
   // --- Init ---
   async function init() {
     try {
-      loadingTextEl.textContent = "Loading catalog...";
+      loadingTextEl.textContent = "Loading 43,000+ sources…";
       indexData = await fetchCatalogIndex();
       docs = indexData.docs;
       docCountryMap = buildDocCountryMap(indexData.countries);
-      // Enrich docs with country field for filtering
       for (let i = 0; i < docs.length; i++) {
         (docs[i] as any)._co = docCountryMap.get(i) ?? "";
       }
       engine = createSearchEngine(docs);
+
+      // Restore filters from URL hash
+      loadFiltersFromHash();
+
       renderAllFacets();
       applyAndRender();
       showMain();
@@ -170,6 +199,48 @@ import Layout from "../layouts/Layout.astro";
     headingEl.classList.add("hidden");
   }
 
+  // --- URL hash sync ---
+  function saveFiltersToHash() {
+    const params = new URLSearchParams();
+    if (filters.topic) params.set("topic", filters.topic);
+    if (filters.subcategory) params.set("subcategory", filters.subcategory);
+    if (filters.country) params.set("country", filters.country);
+    if (filters.mediaKind) params.set("media", filters.mediaKind);
+    if (filters.language) params.set("lang", filters.language);
+    if (filters.activity) params.set("activity", filters.activity);
+    if (searchInput.value.trim()) params.set("q", searchInput.value.trim());
+    if (sortOrder) params.set("sort", sortOrder);
+    if (perPage !== 50) params.set("n", String(perPage));
+    if (currentPage > 1) params.set("p", String(currentPage));
+    const hash = params.toString();
+    history.replaceState(null, "", hash ? `#${hash}` : window.location.pathname);
+  }
+
+  function loadFiltersFromHash() {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const topic = params.get("topic");
+    const subcategory = params.get("subcategory");
+    const country = params.get("country");
+    const media = params.get("media");
+    const lang = params.get("lang");
+    const activity = params.get("activity");
+    const q = params.get("q");
+    const sort = params.get("sort");
+    const n = params.get("n");
+    const p = params.get("p");
+
+    if (topic) filters.topic = topic;
+    if (subcategory) filters.subcategory = subcategory;
+    if (country) filters.country = country;
+    if (media) filters.mediaKind = media;
+    if (lang) filters.language = lang;
+    if (activity) filters.activity = activity;
+    if (q) searchInput.value = q;
+    if (sort === "az" || sort === "za") { sortOrder = sort; sortSelect.value = sort; }
+    if (n === "25" || n === "50" || n === "100") { perPage = parseInt(n); perPageSelect.value = n; }
+    if (p) currentPage = Math.max(1, parseInt(p) || 1);
+  }
+
   // --- Facet rendering ---
 
   function renderAllFacets() {
@@ -177,9 +248,10 @@ import Layout from "../layouts/Layout.astro";
 
     // Topics
     const topicsList = document.getElementById("facet-topics-list")!;
+    const topicsBadge = document.getElementById("facet-topics-badge")!;
     const topic = indexData.tree.find(t => t.k === filters.topic);
     if (filters.topic && topic) {
-      // Show subcategories when a topic is selected
+      topicsBadge.textContent = filters.subcategory ? "" : `(${counts.topics.find(t => t.k === filters.topic)?.c ?? 0})`;
       topicsList.innerHTML = topic.sub
         .map(sub => facetItem(sub.k, sub.c, filters.subcategory === sub.k, "subcategory"))
         .join("");
@@ -187,6 +259,7 @@ import Layout from "../layouts/Layout.astro";
         el.addEventListener("click", () => setFilter("subcategory", el.getAttribute("data-facet")!));
       });
     } else {
+      topicsBadge.textContent = filters.topic ? "" : `(${counts.topics.length})`;
       topicsList.innerHTML = counts.topics
         .map(t => facetItem(t.k, t.c, filters.topic === t.k, "topic"))
         .join("");
@@ -197,6 +270,8 @@ import Layout from "../layouts/Layout.astro";
 
     // Countries
     const countriesList = document.getElementById("facet-countries-list")!;
+    const countriesBadge = document.getElementById("facet-countries-badge")!;
+    countriesBadge.textContent = filters.country ? `(1 selected)` : `(${counts.countries.length})`;
     countriesList.innerHTML = counts.countries
       .map(c => facetItem(c.k, c.c, filters.country === c.k, "country"))
       .join("");
@@ -206,6 +281,8 @@ import Layout from "../layouts/Layout.astro";
 
     // Media
     const mediaList = document.getElementById("facet-media-list")!;
+    const mediaBadge = document.getElementById("facet-media-badge")!;
+    mediaBadge.textContent = filters.mediaKind ? `(1 selected)` : "";
     mediaList.innerHTML = counts.mediaKinds
       .map(m => facetItem(m.label, m.c, filters.mediaKind === m.k, "media", m.k))
       .join("");
@@ -215,6 +292,8 @@ import Layout from "../layouts/Layout.astro";
 
     // Languages
     const langList = document.getElementById("facet-language-list")!;
+    const langBadge = document.getElementById("facet-language-badge")!;
+    langBadge.textContent = filters.language ? `(1 selected)` : "";
     langList.innerHTML = counts.languages
       .map(l => facetItem(l.k, l.c, filters.language === l.k, "language"))
       .join("");
@@ -224,6 +303,8 @@ import Layout from "../layouts/Layout.astro";
 
     // Activities
     const actList = document.getElementById("facet-activity-list")!;
+    const actBadge = document.getElementById("facet-activity-badge")!;
+    actBadge.textContent = filters.activity ? `(1 selected)` : "";
     actList.innerHTML = counts.activities
       .map(a => facetItem(a.label, a.c, filters.activity === a.k, "activity", a.k))
       .join("");
@@ -252,15 +333,11 @@ import Layout from "../layouts/Layout.astro";
 
   function setFilter(key: keyof FilterState, value: string) {
     if (filters[key] === value) {
-      // Deselect
       filters = { ...filters, [key]: "" };
-      // If deselecting topic, also clear subcategory
       if (key === "topic") filters.subcategory = "";
     } else {
       filters = { ...filters, [key]: value };
-      // Selecting a topic clears subcategory
       if (key === "topic") filters.subcategory = "";
-      // Selecting a subcategory sets the topic implicitly
       if (key === "subcategory") {
         const parent = indexData.tree.find(t => t.sub.some(s => s.k === value));
         if (parent) filters.topic = parent.k;
@@ -279,8 +356,10 @@ import Layout from "../layouts/Layout.astro";
 
   function clearAllFilters() {
     filters = emptyFilters();
+    sortOrder = "";
+    sortSelect.value = "";
     currentPage = 1;
-    (document.getElementById("catalog-search") as HTMLInputElement).value = "";
+    searchInput.value = "";
     applyAndRender();
   }
 
@@ -288,13 +367,23 @@ import Layout from "../layouts/Layout.astro";
 
   function applyAndRender() {
     const query = searchInput.value;
-    currentResults = searchAndFilter(query, engine, docs, filters);
-    const page = paginate(currentResults, currentPage);
+    let results = searchAndFilter(query, engine, docs, filters);
+
+    // Sort
+    if (sortOrder === "az") {
+      results = [...results].sort((a, b) => a.t.localeCompare(b.t));
+    } else if (sortOrder === "za") {
+      results = [...results].sort((a, b) => b.t.localeCompare(a.t));
+    }
+
+    currentResults = results;
+    const page = paginate(results, currentPage, perPage);
     renderChips();
     renderAllFacets();
-    renderResults(page.items);
+    renderResults(page.items, page.total);
     renderPagination(page);
     renderHeading();
+    saveFiltersToHash();
   }
 
   // --- Chips ---
@@ -311,61 +400,80 @@ import Layout from "../layouts/Layout.astro";
     if (filters.language) chips.push({ label: filters.language, key: "language", value: filters.language });
     if (filters.activity) chips.push({ label: activityLabels[filters.activity] ?? filters.activity, key: "activity", value: filters.activity });
 
-    if (chips.length === 0) {
+    if (chips.length === 0 && !searchInput.value.trim()) {
       chipsEl.innerHTML = "";
       return;
     }
 
-    chipsEl.innerHTML =
-      chips
-        .map(
-          (c) => `
+    let html = "";
+    if (searchInput.value.trim()) {
+      html += `<span class="inline-flex items-center gap-1 rounded-full border border-[#d4d0c8] bg-[#f5f3ef] px-2.5 py-1 text-[12px] text-[#1a1a1a]">Search: ${escapeHtml(searchInput.value.trim())}<button data-chip-clear-search class="inline-flex items-center text-[#8a8a8a] hover:text-[#1a1a1a]" aria-label="Clear search">&times;</button></span>`;
+    }
+    for (const c of chips) {
+      html += `
         <span class="inline-flex items-center gap-1 rounded-full border border-[#d4d0c8] bg-[#f5f3ef] px-2.5 py-1 text-[12px] text-[#1a1a1a]">
           ${escapeHtml(c.label)}
           <button data-chip-key="${c.key}" class="inline-flex items-center text-[#8a8a8a] hover:text-[#1a1a1a]" aria-label="Remove ${escapeAttr(c.label)} filter">&times;</button>
-        </span>`,
-        )
-        .join("") +
-      `<button id="clear-all-filters" class="text-[12px] text-[#6b6b6b] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">Clear all</button>`;
+        </span>`;
+    }
+    html += `<button id="clear-all-filters" class="text-[12px] text-[#6b6b6b] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">Clear all</button>`;
+
+    chipsEl.innerHTML = html;
 
     chipsEl.querySelectorAll<HTMLButtonElement>("[data-chip-key]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        removeFilter(btn.getAttribute("data-chip-key") as keyof FilterState);
-      });
+      btn.addEventListener("click", () => removeFilter(btn.getAttribute("data-chip-key") as keyof FilterState));
     });
-
+    chipsEl.querySelector<HTMLButtonElement>("[data-chip-clear-search]")?.addEventListener("click", () => {
+      searchInput.value = "";
+      currentPage = 1;
+      applyAndRender();
+    });
     document.getElementById("clear-all-filters")?.addEventListener("click", clearAllFilters);
   }
 
   // --- Results ---
 
-  function renderResults(items: DocEntry[]) {
+  function renderResults(items: DocEntry[], total: number) {
     if (items.length === 0) {
-      resultsListEl.innerHTML = `<p class="text-[14px] leading-relaxed text-[#5c5c5c]">No sources match your filters.</p>`;
+      const hasFilters = filters.topic || filters.subcategory || filters.country || filters.mediaKind || filters.language || filters.activity || searchInput.value.trim();
+      const suggestions = hasFilters
+        ? `<p class="mt-3 text-[13px] text-[#8a8a8a]">Suggestions: <button class="underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]" id="clear-suggest">Clear all filters</button> or try a different search term.</p>`
+        : "";
+      resultsListEl.innerHTML = `
+        <div class="py-12 text-center">
+          <p class="text-[14px] leading-relaxed text-[#5c5c5c]">No sources match your ${hasFilters ? "filters" : "search"}.</p>
+          ${suggestions}
+        </div>`;
+      document.getElementById("clear-suggest")?.addEventListener("click", clearAllFilters);
       return;
     }
     resultsListEl.innerHTML = items.map(feedCard).join("");
   }
 
   function feedCard(doc: DocEntry): string {
-    const description = escapeHtml(doc.d).trim().substring(0, 140);
-    const mediaLabel = doc.m === "audio" ? "Audio" : doc.m === "video" ? "Video" : "Text";
+    const description = escapeHtml(doc.d).trim();
+    const hasDesc = description.length > 0;
+    const truncated = hasDesc ? description.substring(0, 140) + (description.length > 140 ? "…" : "") : "";
 
     return `
       <a href="/feed?sourceId=${escapeAttr(doc.s)}"
-         class="block rounded-lg border border-[#e8e4dd] p-3 transition-colors hover:border-[#d4d0c8] hover:bg-[#f5f3ef]">
-        <span class="block truncate text-[14px] font-medium text-[#1a1a1a]">${escapeHtml(doc.t)}</span>
-        <span class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-[#6b6b6b]">
-          ${mediaBadge(doc.m)}
-          ${escapeHtml(mediaLabel)}
-          <span aria-hidden="true" class="text-[#d4d0c8]">·</span>
-          ${escapeHtml(doc.l.toUpperCase())}
-          <span aria-hidden="true" class="text-[#d4d0c8]">·</span>
-          ${escapeHtml(doc.sc || doc.tp)}
-          <span aria-hidden="true" class="text-[#d4d0c8]">·</span>
-          ${escapeHtml(activityLabel(doc.a))}
-        </span>
-        ${description ? `<span class="mt-1 block text-[13px] leading-relaxed text-[#5c5c5c]">${description}</span>` : ""}
+         class="group block rounded-lg border border-[#e8e4dd] p-3 transition-colors hover:border-[#c4bfb4] hover:bg-white">
+        <div class="flex items-start gap-3">
+          <span class="mt-0.5 shrink-0 text-[#8a8a8a] group-hover:text-[#6b6b6b] transition-colors">
+            ${mediaBadge(doc.m)}
+          </span>
+          <div class="min-w-0 flex-1">
+            <span class="block truncate text-[14px] font-medium text-[#1a1a1a]">${escapeHtml(doc.t)}</span>
+            <span class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-[#6b6b6b]">
+              <span class="font-mono text-[11px] uppercase text-[#8a8a8a]">${escapeHtml(doc.l)}</span>
+              <span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span>
+              ${escapeHtml(doc.sc || doc.tp)}
+              <span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span>
+              ${escapeHtml(activityLabel(doc.a))}
+            </span>
+            ${hasDesc ? `<span class="mt-1 block text-[13px] leading-relaxed text-[#5c5c5c]">${truncated}</span>` : ""}
+          </div>
+        </div>
       </a>`;
   }
 
@@ -374,7 +482,7 @@ import Layout from "../layouts/Layout.astro";
   function renderPagination(page: ReturnType<typeof paginate>) {
     const countHtml = page.total === 0
       ? "No results"
-      : `Showing ${((page.page - 1) * 50) + 1}&ndash;${Math.min(page.page * 50, page.total)} of ${page.total.toLocaleString()} sources`;
+      : `Showing ${(page.page - 1) * perPage + 1}&ndash;${Math.min(page.page * perPage, page.total)} of ${page.total.toLocaleString()} sources`;
 
     resultsCountTopEl.innerHTML = countHtml;
     resultsCountEl.innerHTML = countHtml;
@@ -386,15 +494,15 @@ import Layout from "../layouts/Layout.astro";
     }
 
     let html = "";
-    html += pageButton(page.page > 1, page.page - 1, "&larr; Prev");
+    html += pageButton(page.page > 1, page.page - 1, "← Prev");
     for (let p = 1; p <= page.pages; p++) {
       if (p === 1 || p === page.pages || (p >= page.page - 2 && p <= page.page + 2)) {
         html += pageNumber(p, p === page.page);
       } else if (p === page.page - 3 || p === page.page + 3) {
-        html += `<span class="px-1 text-[#8a8a8a]">&hellip;</span>`;
+        html += `<span class="px-1 text-[#8a8a8a]">…</span>`;
       }
     }
-    html += pageButton(page.page < page.pages, page.page + 1, "Next &rarr;");
+    html += pageButton(page.page < page.pages, page.page + 1, "Next →");
 
     resultsPagesTopEl.innerHTML = html;
     resultsPagesEl.innerHTML = html;
@@ -412,9 +520,9 @@ import Layout from "../layouts/Layout.astro";
     wirePages(resultsPagesEl);
   }
 
-  function pageButton(enabled: boolean, page: number, label: string): string {
+  function pageButton(enabled: boolean, pg: number, label: string): string {
     if (!enabled) return `<span class="px-2 py-1 text-[#c4bfb4]">${label}</span>`;
-    return `<button data-page="${page}" class="rounded px-2 py-1 text-[#6b6b6b] transition-colors hover:bg-[#f5f3ef] hover:text-[#1a1a1a]">${label}</button>`;
+    return `<button data-page="${pg}" class="rounded px-2 py-1 text-[#6b6b6b] transition-colors hover:bg-[#f5f3ef] hover:text-[#1a1a1a]">${label}</button>`;
   }
 
   function pageNumber(p: number, current: boolean): string {
@@ -453,10 +561,10 @@ import Layout from "../layouts/Layout.astro";
   }
 
   function mediaBadge(m: string): string {
-    const common = 'xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-[#8a8a8a]"';
-    if (m === "audio") return `<svg ${common} role="img" aria-label="Audio"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>`;
-    if (m === "video") return `<svg ${common} role="img" aria-label="Video"><polygon points="6 3 20 12 6 21 6 3"/></svg>`;
-    return `<svg ${common} role="img" aria-label="Text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`;
+    const common = 'xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+    if (m === "audio") return `<svg ${common}><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>`;
+    if (m === "video") return `<svg ${common}><polygon points="6 3 20 12 6 21 6 3"/></svg>`;
+    return `<svg ${common}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`;
   }
 
   // --- Events ---
@@ -467,7 +575,27 @@ import Layout from "../layouts/Layout.astro";
   });
 
   searchInput.addEventListener("input", debounce(() => { currentPage = 1; applyAndRender(); }, 200));
-  retryBtn.addEventListener("click", () => { location.reload(); });
 
+  sortSelect.addEventListener("change", () => {
+    sortOrder = sortSelect.value;
+    currentPage = 1;
+    applyAndRender();
+  });
+
+  perPageSelect.addEventListener("change", () => {
+    perPage = parseInt(perPageSelect.value);
+    currentPage = 1;
+    applyAndRender();
+  });
+
+  // Keyboard shortcut: / to focus search
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "/" && document.activeElement !== searchInput && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA" && document.activeElement?.tagName !== "SELECT") {
+      e.preventDefault();
+      searchInput.focus();
+    }
+  });
+
+  retryBtn.addEventListener("click", () => { location.reload(); });
   void init();
 </script>
