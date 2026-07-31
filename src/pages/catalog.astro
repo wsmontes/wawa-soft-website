@@ -85,6 +85,10 @@ import Layout from "../layouts/Layout.astro";
 
         <!-- Results -->
         <main class="min-w-0 flex-1">
+          <div id="results-header" class="mb-3 flex items-center justify-between gap-4">
+            <p id="results-count-top" class="text-[13px] text-[#8a8a8a]"></p>
+            <nav id="results-pages-top" class="flex items-center gap-1 text-[13px]"></nav>
+          </div>
           <div id="results-list" class="space-y-2"></div>
           <div id="results-footer" class="mt-5 flex items-center justify-between gap-4">
             <p id="results-count" class="text-[13px] text-[#8a8a8a]"></p>
@@ -130,6 +134,8 @@ import Layout from "../layouts/Layout.astro";
   const resultsListEl = document.getElementById("results-list")!;
   const resultsCountEl = document.getElementById("results-count")!;
   const resultsPagesEl = document.getElementById("results-pages")!;
+  const resultsCountTopEl = document.getElementById("results-count-top")!;
+  const resultsPagesTopEl = document.getElementById("results-pages-top")!;
   const sidebarEl = document.getElementById("sidebar-facets")!;
   const sidebarToggle = document.getElementById("sidebar-toggle")!;
 
@@ -359,11 +365,15 @@ import Layout from "../layouts/Layout.astro";
   // --- Pagination ---
 
   function renderPagination(page: ReturnType<typeof paginate>) {
-    resultsCountEl.innerHTML = page.total === 0
+    const countHtml = page.total === 0
       ? "No results"
       : `Showing ${((page.page - 1) * 50) + 1}&ndash;${Math.min(page.page * 50, page.total)} of ${page.total.toLocaleString()} sources`;
 
+    resultsCountTopEl.innerHTML = countHtml;
+    resultsCountEl.innerHTML = countHtml;
+
     if (page.pages <= 1) {
+      resultsPagesTopEl.innerHTML = "";
       resultsPagesEl.innerHTML = "";
       return;
     }
@@ -378,15 +388,21 @@ import Layout from "../layouts/Layout.astro";
       }
     }
     html += pageButton(page.page < page.pages, page.page + 1, "Next &rarr;");
+
+    resultsPagesTopEl.innerHTML = html;
     resultsPagesEl.innerHTML = html;
 
-    resultsPagesEl.querySelectorAll<HTMLButtonElement>("[data-page]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        currentPage = parseInt(btn.getAttribute("data-page")!, 10);
-        applyAndRender();
-        resultsListEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    const wirePages = (el: HTMLElement) => {
+      el.querySelectorAll<HTMLButtonElement>("[data-page]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          currentPage = parseInt(btn.getAttribute("data-page")!, 10);
+          applyAndRender();
+          resultsListEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
       });
-    });
+    };
+    wirePages(resultsPagesTopEl);
+    wirePages(resultsPagesEl);
   }
 
   function pageButton(enabled: boolean, page: number, label: string): string {
