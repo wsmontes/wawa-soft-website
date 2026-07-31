@@ -1,0 +1,382 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+  title="Feed Catalog"
+  description="FeedMine catalog entry — datasheet for a feed source."
+>
+  <div id="feed-datasheet" class="pb-16 pt-8">
+    <!-- Breadcrumb -->
+    <a
+      href="/feedmine"
+      class="inline-flex items-center gap-1 text-[13px] text-[#6b6b6b] transition-colors hover:text-[#1a1a1a]"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      FeedMine Catalog
+    </a>
+
+    <!-- SKELETON: replaced by JS on successful load -->
+    <div id="feed-content" class="mt-6 space-y-10">
+      <!-- Hero skeleton -->
+      <div class="animate-pulse space-y-3">
+        <div class="h-7 w-64 rounded bg-[#e8e4dd]"></div>
+        <div class="h-5 w-full max-w-[560px] rounded bg-[#e8e4dd]"></div>
+        <div class="h-4 w-48 rounded bg-[#e8e4dd]"></div>
+      </div>
+
+      <!-- Card skeletons -->
+      <div class="grid gap-3 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map(() => (
+          <div class="animate-pulse rounded-lg border border-[#e8e4dd] p-4">
+            <div class="mb-2 h-3 w-16 rounded bg-[#e8e4dd]"></div>
+            <div class="h-5 w-24 rounded bg-[#e8e4dd]"></div>
+          </div>
+        ))}
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map(() => (
+          <div class="animate-pulse rounded-lg border border-[#e8e4dd] p-4">
+            <div class="mb-2 h-3 w-16 rounded bg-[#e8e4dd]"></div>
+            <div class="h-5 w-36 rounded bg-[#e8e4dd]"></div>
+          </div>
+        ))}
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2">
+        {Array.from({ length: 2 }).map(() => (
+          <div class="animate-pulse rounded-lg border border-[#e8e4dd] p-4">
+            <div class="mb-2 h-3 w-16 rounded bg-[#e8e4dd]"></div>
+            <div class="h-5 w-40 rounded bg-[#e8e4dd]"></div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Technical skeleton -->
+      <div class="animate-pulse space-y-3">
+        <div class="h-5 w-20 rounded bg-[#e8e4dd]"></div>
+        <div class="h-4 w-full max-w-[520px] rounded bg-[#e8e4dd]"></div>
+        <div class="h-4 w-96 rounded bg-[#e8e4dd]"></div>
+      </div>
+
+      <!-- Catalog footer skeleton -->
+      <div class="animate-pulse rounded-lg border border-[#e8e4dd] p-4">
+        <div class="mb-2 h-3 w-32 rounded bg-[#e8e4dd]"></div>
+        <div class="h-4 w-72 rounded bg-[#e8e4dd]"></div>
+      </div>
+    </div>
+
+    <!-- ERROR STATE: hidden by default, shown by JS on error -->
+    <div id="feed-error" class="mt-16 hidden text-center">
+      <p class="text-[15px] text-[#5c5c5c]" id="feed-error-message">
+        Could not load catalog data. The source ID may be invalid or the
+        catalog may be temporarily unavailable.
+      </p>
+      <button
+        id="feed-retry"
+        class="mt-4 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]"
+      >
+        Retry
+      </button>
+    </div>
+
+    <!-- NOT FOUND STATE: hidden by default -->
+    <div id="feed-not-found" class="mt-16 hidden text-center">
+      <p class="text-[15px] text-[#5c5c5c]">
+        Source ID not found in the FeedMine catalog.
+      </p>
+      <a
+        href="https://github.com/wawasoft/feed-repository"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mt-3 inline-flex items-center gap-1.5 text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]"
+      >
+        Browse catalog on GitHub &rarr;
+      </a>
+    </div>
+
+    <!-- INVALID HASH STATE: hidden by default -->
+    <div id="feed-invalid" class="mt-16 hidden text-center">
+      <p class="text-[15px] text-[#5c5c5c]">
+        Invalid source ID. A source ID is a 64-character hexadecimal string.
+      </p>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import {
+    fetchFeedRecord,
+    fetchCatalogManifest,
+    isValidSourceId,
+    formatEnabled,
+    formatTimestamp,
+    formatDate,
+    mediaKindLabel,
+    activityLabel,
+    natureLabel,
+    INDEX_BASE_URL,
+  } from "../lib/feed-catalog";
+
+  const sourceId = new URLSearchParams(window.location.search).get("sourceId");
+
+  // DOM refs
+  const contentEl = document.getElementById("feed-content")!;
+  const errorEl = document.getElementById("feed-error")!;
+  const errorMsgEl = document.getElementById("feed-error-message")!;
+  const notFoundEl = document.getElementById("feed-not-found")!;
+  const invalidEl = document.getElementById("feed-invalid")!;
+  const retryBtn = document.getElementById("feed-retry")!;
+
+  function show(el: HTMLElement) {
+    el.classList.remove("hidden");
+  }
+
+  function hideAll() {
+    for (const el of [errorEl, notFoundEl, invalidEl]) {
+      el.classList.add("hidden");
+    }
+  }
+
+  function handleError(message: string) {
+    contentEl.innerHTML = "";
+    hideAll();
+    errorMsgEl.textContent = message;
+    show(errorEl);
+  }
+
+  async function render() {
+    hideAll();
+
+    if (!sourceId) {
+      contentEl.innerHTML = "";
+      show(invalidEl);
+      invalidEl.querySelector("p")!.textContent =
+        "No source ID provided. Add ?sourceId=<64-char-hex> to the URL.";
+      return;
+    }
+
+    if (!isValidSourceId(sourceId)) {
+      contentEl.innerHTML = "";
+      show(invalidEl);
+      return;
+    }
+
+    try {
+      const [feed, manifest] = await Promise.all([
+        fetchFeedRecord(sourceId),
+        fetchCatalogManifest(),
+      ]);
+
+      if (!feed) {
+        contentEl.innerHTML = "";
+        show(notFoundEl);
+        return;
+      }
+
+      contentEl.innerHTML = renderDatasheet(feed, manifest);
+    } catch (err) {
+      handleError(
+        err instanceof Error
+          ? err.message
+          : "Could not load catalog data. Please try again.",
+      );
+    }
+  }
+
+  retryBtn.addEventListener("click", () => {
+    void render();
+  });
+
+  void render();
+
+  function renderDatasheet(
+    feed: import("../lib/feed-catalog").FeedRecord,
+    manifest: import("../lib/feed-catalog").CatalogManifest,
+  ): string {
+    const opmlUrl = `${INDEX_BASE_URL}/${feed._opmlPath}`;
+    const repoUrl = `https://github.com/wawasoft/feed-repository/blob/main/${feed._opmlPath}`;
+
+    return `
+      <!-- Hero -->
+      <div class="rounded-lg border border-[#e8e4dd] p-6">
+        <h1 class="text-[22px] font-medium leading-tight text-[#1a1a1a]">
+          ${escapeHtml(feed.title)}
+        </h1>
+        <p class="mt-2 max-w-[620px] text-[15px] leading-relaxed text-[#5c5c5c]">
+          ${escapeHtml(feed.description)}
+        </p>
+        <div class="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-[#6b6b6b]">
+          ${feed.htmlUrl ? `
+            <a href="${escapeAttr(feed.htmlUrl)}" target="_blank" rel="noopener noreferrer"
+               class="inline-flex items-center gap-1 underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">
+              ${iconLink()} ${formatUrl(feed.htmlUrl)}
+            </a>` : ""}
+          <a href="${escapeAttr(feed.xmlUrl)}" target="_blank" rel="noopener noreferrer"
+             class="inline-flex items-center gap-1 underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">
+            ${iconFeed()} ${formatUrl(feed.xmlUrl)}
+          </a>
+        </div>
+      </div>
+
+      <!-- Identity -->
+      <section>
+        <h2 class="text-[16px] font-medium text-[#1a1a1a]">Identity</h2>
+        <div class="mt-3 grid gap-3 sm:grid-cols-3">
+          ${card("Format", "RSS")}
+          ${card("Language", feed.language)}
+          ${card("Media", mediaKindLabel(feed.feedmineMediaKind))}
+        </div>
+      </section>
+
+      <!-- Catalog Info -->
+      <section>
+        <h2 class="text-[16px] font-medium text-[#1a1a1a]">Catalog Info</h2>
+        <div class="mt-3 grid gap-3 sm:grid-cols-3">
+          ${card("Topic", feed.feedmineTopic)}
+          ${card("Subcategory", feed.feedmineSubcategory)}
+          ${card("Country", countryFromPath(feed._opmlPath))}
+        </div>
+        <div class="mt-3 grid gap-3 sm:grid-cols-3">
+          ${card("Nature", natureLabel(feed.feedmineNature))}
+          ${card("Activity", activityLabel(feed.feedmineActivity))}
+          ${card("Default", formatEnabled(feed.feedmineDefaultEnabled))}
+        </div>
+        <div class="mt-3">
+          ${cardBlock("Keywords", escapeHtml(feed.category))}
+        </div>
+      </section>
+
+      <!-- Activity -->
+      <section>
+        <h2 class="text-[16px] font-medium text-[#1a1a1a]">Activity</h2>
+        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+          ${card("Articles cataloged", feed.feedmineArticlesFetched)}
+          ${card("Last item observed", formatTimestamp(feed.feedmineLatestItemAt))}
+        </div>
+        <p class="mt-2 text-[12px] text-[#8a8a8a]">
+          Data from the last FeedMine catalog curation. Does not reflect real-time metrics.
+        </p>
+      </section>
+
+      <!-- Technical -->
+      <section>
+        <h2 class="text-[16px] font-medium text-[#1a1a1a]">Technical</h2>
+        <div class="mt-3 space-y-3">
+          ${cardBlock("Source ID", `<span class="font-mono text-[12px] break-all">${escapeHtml(feed.feedmineSourceId)}</span>`)}
+          ${cardBlock("OPML file", `<span class="font-mono text-[12px] break-all">${escapeHtml(feed._opmlPath)}</span>`)}
+        </div>
+      </section>
+
+      <!-- Catalog Footer -->
+      <section>
+        <h2 class="text-[16px] font-medium text-[#1a1a1a]">FeedMine Catalog</h2>
+        <div class="mt-3 rounded-lg border border-[#e8e4dd] p-4">
+          <p class="text-[14px] leading-relaxed text-[#5c5c5c]">
+            ${manifest.sourceCount.toLocaleString()} sources ·
+            ${countryCount(manifest).toString()} countries ·
+            ${topicCount(manifest).toString()} topics ·
+            ${manifest.fileCount.toLocaleString()} OPML files
+          </p>
+          <p class="mt-1 text-[13px] text-[#8a8a8a]">
+            Catalog updated ${formatDate(manifest.generatedAt)}
+          </p>
+        </div>
+      </section>
+
+      <!-- External links -->
+      <div class="flex flex-wrap gap-3">
+        <a href="${repoUrl}" target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]">
+          ${iconGitHub()} View on GitHub &rarr;
+        </a>
+        <a href="${opmlUrl}" target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]">
+          ${iconDownload()} Download OPML
+        </a>
+      </div>
+
+      <!-- Disclaimer -->
+      <p class="text-[12px] text-[#8a8a8a]">
+        Data from the last FeedMine catalog curation. Does not reflect real-time metrics.
+      </p>
+    `;
+  }
+
+  // --- Helper functions ---
+
+  function card(label: string, value: string): string {
+    return `
+      <div class="rounded-lg border border-[#e8e4dd] p-4">
+        <dt class="font-mono text-[11px] uppercase tracking-wider text-[#8a8a8a]">${escapeHtml(label)}</dt>
+        <dd class="mt-1 text-[14px] text-[#1a1a1a]">${escapeHtml(value)}</dd>
+      </div>`;
+  }
+
+  function cardBlock(label: string, html: string): string {
+    return `
+      <div class="rounded-lg border border-[#e8e4dd] p-4">
+        <dt class="font-mono text-[11px] uppercase tracking-wider text-[#8a8a8a]">${escapeHtml(label)}</dt>
+        <dd class="mt-1 text-[14px] text-[#1a1a1a]">${html}</dd>
+      </div>`;
+  }
+
+  function countryFromPath(path: string): string {
+    const match = path.match(/^Feeds\/90_countries\/([^/]+)\//);
+    if (!match) return "—";
+    return match[1]
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  function countryCount(manifest: import("../lib/feed-catalog").CatalogManifest): number {
+    return manifest.files.filter((f) =>
+      f.path.includes("90_countries/"),
+    ).length;
+  }
+
+  function topicCount(manifest: import("../lib/feed-catalog").CatalogManifest): number {
+    // Topic OPMLs are everything NOT in 90_countries/
+    return manifest.files.filter((f) =>
+      !f.path.includes("90_countries/"),
+    ).length;
+  }
+
+  function formatUrl(url: string): string {
+    try {
+      const u = new URL(url);
+      return u.hostname + u.pathname;
+    } catch {
+      return url;
+    }
+  }
+
+  function escapeHtml(s: string): string {
+    const div = document.createElement("div");
+    div.appendChild(document.createTextNode(s));
+    return div.innerHTML;
+  }
+
+  function escapeAttr(s: string): string {
+    return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // --- Inline SVG icons ---
+
+  function iconLink(): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
+  }
+
+  function iconFeed(): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>`;
+  }
+
+  function iconGitHub(): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>`;
+  }
+
+  function iconDownload(): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+  }
+</script>
