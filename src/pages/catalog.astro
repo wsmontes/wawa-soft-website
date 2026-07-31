@@ -311,13 +311,27 @@ import Layout from "../layouts/Layout.astro";
     langEl.open = filters.language !== "";
     actEl.open = filters.activity !== "";
 
-    // Countries
+    // Countries — show top 15 with "Show all" toggle
     const countriesList = document.getElementById("facet-countries-list")!;
     const countriesBadge = document.getElementById("facet-countries-badge")!;
+    const SHOW_N = 15;
+    const visibleCountries = counts.countries.slice(0, SHOW_N);
+    const hiddenCount = counts.countries.length - SHOW_N;
     countriesBadge.textContent = filters.country ? `(1 selected)` : `(${counts.countries.length})`;
-    countriesList.innerHTML = counts.countries
+    countriesList.innerHTML = visibleCountries
       .map(c => facetItem(c.k, c.c, filters.country === c.k, "country"))
       .join("");
+    if (hiddenCount > 0) {
+      countriesList.innerHTML += `<button id="show-all-countries" class="mt-1 w-full text-left text-[11px] text-[#6b6b6b] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">Show all ${counts.countries.length} countries&hellip;</button>`;
+      document.getElementById("show-all-countries")!.addEventListener("click", () => {
+        countriesList.innerHTML = counts.countries
+          .map(c => facetItem(c.k, c.c, filters.country === c.k, "country"))
+          .join("");
+        countriesList.querySelectorAll("[data-facet]").forEach(el => {
+          el.addEventListener("click", () => setFilter("country", el.getAttribute("data-facet")!));
+        });
+      });
+    }
     countriesList.querySelectorAll("[data-facet]").forEach(el => {
       el.addEventListener("click", () => setFilter("country", el.getAttribute("data-facet")!));
     });
