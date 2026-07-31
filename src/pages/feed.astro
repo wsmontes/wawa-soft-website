@@ -139,10 +139,12 @@ import Layout from "../layouts/Layout.astro";
     }
   }
 
-  function handleError(message: string) {
+  function handleError(err: unknown) {
+    console.error("Could not load catalog data:", err);
     contentEl.innerHTML = "";
     hideAll();
-    errorMsgEl.textContent = message;
+    errorMsgEl.textContent =
+      "Could not load catalog data. The source ID may be invalid or the catalog may be temporarily unavailable.";
     show(errorEl);
   }
 
@@ -163,26 +165,34 @@ import Layout from "../layouts/Layout.astro";
       return;
     }
 
-    try {
-      const [feed, manifest] = await Promise.all([
-        fetchFeedRecord(sourceId),
-        fetchCatalogManifest(),
-      ]);
-
-      if (!feed) {
-        contentEl.innerHTML = "";
-        show(notFoundEl);
-        return;
+    // Fetch the manifest in parallel, but never let its failure block the
+    // datasheet — the footer stats degrade to an "unavailable" notice instead.
+    const manifestPromise = (async () => {
+      try {
+        return await fetchCatalogManifest();
+      } catch (err) {
+        console.error("Failed to fetch catalog manifest:", err);
+        return null;
       }
+    })();
 
-      contentEl.innerHTML = renderDatasheet(feed, manifest);
+    let feed: import("../lib/feed-catalog").FeedRecord | null;
+    try {
+      feed = await fetchFeedRecord(sourceId);
     } catch (err) {
-      handleError(
-        err instanceof Error
-          ? err.message
-          : "Could not load catalog data. Please try again.",
-      );
+      handleError(err);
+      return;
     }
+
+    const manifest = await manifestPromise;
+
+    if (!feed) {
+      contentEl.innerHTML = "";
+      show(notFoundEl);
+      return;
+    }
+
+    contentEl.innerHTML = renderDatasheet(feed, manifest);
   }
 
   retryBtn.addEventListener("click", () => {
@@ -193,7 +203,7 @@ import Layout from "../layouts/Layout.astro";
 
   function renderDatasheet(
     feed: import("../lib/feed-catalog").FeedRecord,
-    manifest: import("../lib/feed-catalog").CatalogManifest,
+    manifest: import("../lib/feed-catalog").CatalogManifest | null,
   ): string {
     const opmlUrl = `${INDEX_BASE_URL}/${feed._opmlPath}`;
     const repoUrl = `https://github.com/wawasoft/feed-repository/blob/main/${feed._opmlPath}`;
@@ -208,15 +218,8 @@ import Layout from "../layouts/Layout.astro";
           ${escapeHtml(feed.description)}
         </p>
         <div class="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-[#6b6b6b]">
-          ${feed.htmlUrl ? `
-            <a href="${escapeAttr(feed.htmlUrl)}" target="_blank" rel="noopener noreferrer"
-               class="inline-flex items-center gap-1 underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">
-              ${iconLink()} ${formatUrl(feed.htmlUrl)}
-            </a>` : ""}
-          <a href="${escapeAttr(feed.xmlUrl)}" target="_blank" rel="noopener noreferrer"
-             class="inline-flex items-center gap-1 underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">
-            ${iconFeed()} ${formatUrl(feed.xmlUrl)}
-          </a>
+          ${feed.htmlUrl ? linkOrText(feed.htmlUrl, iconLink()) : ""}
+          ${linkOrText(feed.xmlUrl, iconFeed())}
         </div>
       </div>
 
@@ -224,7 +227,7 @@ import Layout from "../layouts/Layout.astro";
       <section>
         <h2 class="text-[16px] font-medium text-[#1a1a1a]">Identity</h2>
         <div class="mt-3 grid gap-3 sm:grid-cols-3">
-          ${card("Format", "RSS")}
+          ${card("Format", feed.type ?? "—")}
           ${card("Language", feed.language)}
           ${card("Media", mediaKindLabel(feed.feedmineMediaKind))}
         </div>
@@ -273,25 +276,31 @@ import Layout from "../layouts/Layout.astro";
       <section>
         <h2 class="text-[16px] font-medium text-[#1a1a1a]">FeedMine Catalog</h2>
         <div class="mt-3 rounded-lg border border-[#e8e4dd] p-4">
-          <p class="text-[14px] leading-relaxed text-[#5c5c5c]">
-            ${manifest.sourceCount.toLocaleString()} sources ·
-            ${countryCount(manifest).toString()} countries ·
-            ${topicCount(manifest).toString()} topics ·
-            ${manifest.fileCount.toLocaleString()} OPML files
-          </p>
-          <p class="mt-1 text-[13px] text-[#8a8a8a]">
-            Catalog updated ${formatDate(manifest.generatedAt)}
-          </p>
+          ${
+            manifest
+              ? `<p class="text-[14px] leading-relaxed text-[#5c5c5c]">
+                   ${manifest.sourceCount.toLocaleString()} sources ·
+                   ${countryCount(manifest).toString()} countries ·
+                   ${topicCount(manifest).toString()} topics ·
+                   ${manifest.fileCount.toLocaleString()} OPML files
+                 </p>
+                 <p class="mt-1 text-[13px] text-[#8a8a8a]">
+                   Catalog updated ${formatDate(manifest.generatedAt)}
+                 </p>`
+              : `<p class="text-[14px] leading-relaxed text-[#5c5c5c]">
+                   Catalog data unavailable
+                 </p>`
+          }
         </div>
       </section>
 
       <!-- External links -->
       <div class="flex flex-wrap gap-3">
-        <a href="${repoUrl}" target="_blank" rel="noopener noreferrer"
+        <a href="${escapeAttr(repoUrl)}" target="_blank" rel="noopener noreferrer"
            class="inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]">
           ${iconGitHub()} View on GitHub &rarr;
         </a>
-        <a href="${opmlUrl}" target="_blank" rel="noopener noreferrer"
+        <a href="${escapeAttr(opmlUrl)}" target="_blank" rel="noopener noreferrer"
            class="inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]">
           ${iconDownload()} Download OPML
         </a>
@@ -348,8 +357,34 @@ import Layout from "../layouts/Layout.astro";
       const u = new URL(url);
       return u.hostname + u.pathname;
     } catch {
-      return url;
+      return escapeHtml(url);
     }
+  }
+
+  /** Only http:// and https:// URLs are rendered as clickable links. */
+  function isSafeHttp(url: string): boolean {
+    try {
+      const u = new URL(url);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+
+  /** Renders a link for http(s) URLs, plain escaped text for any other scheme. */
+  function linkOrText(url: string, icon: string): string {
+    if (!isSafeHttp(url)) {
+      // Non-http(s) schemes must not become links. Note: the URL parser does
+      // not percent-encode <, >, " in javascript:/data: pathnames, so the
+      // display text must be escaped before injection.
+      const text = escapeHtml(formatUrl(url));
+      return `<span class="inline-flex items-center gap-1">${icon} ${text}</span>`;
+    }
+    const text = formatUrl(url);
+    return `<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer"
+       class="inline-flex items-center gap-1 underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">
+      ${icon} ${text}
+    </a>`;
   }
 
   function escapeHtml(s: string): string {
