@@ -11,6 +11,9 @@ import Layout from "../layouts/Layout.astro";
     <h1 class="text-[28px] font-medium leading-tight tracking-tight text-[#1a1a1a] sm:text-[32px]" id="catalog-heading">Catalog</h1>
     <p id="catalog-lead" class="mt-2 text-[15px] text-[#6b6b6b]">Browse, search, and explore 43,000+ feeds.</p>
 
+    <!-- Screen-reader announcements (e.g. copy-link feedback) -->
+    <span id="catalog-live" class="sr-only" role="status" aria-live="polite"></span>
+
     <!-- Loading state -->
     <div id="catalog-loading" class="mt-6">
       <div class="animate-pulse space-y-3">
@@ -58,6 +61,9 @@ import Layout from "../layouts/Layout.astro";
           </select>
         </div>
       </div>
+
+      <!-- Catalog-wide stats (populated after the index loads) -->
+      <p id="catalog-stats" class="mt-2 text-[13px] text-[#6b6b6b]"></p>
 
       <!-- Searching status (aria-live) -->
       <p id="catalog-searching" class="mt-2 hidden text-[14px] text-[#6b6b6b]" role="status" aria-live="polite">Searching&hellip;</p>
@@ -120,7 +126,7 @@ import Layout from "../layouts/Layout.astro";
             <p id="results-count-top" class="text-[14px] text-[#6b6b6b]"></p>
             <nav id="results-pages-top" class="flex items-center gap-1 text-[13px]"></nav>
           </div>
-          <div id="results-list" tabindex="-1" class="space-y-2 outline-none"></div>
+          <div id="results-list" role="region" aria-label="Search results" tabindex="-1" class="space-y-2 outline-none"></div>
           <div id="results-footer" class="mt-5 flex flex-wrap items-center justify-between gap-2">
             <p id="results-count" class="text-[14px] text-[#6b6b6b]" role="status" aria-live="polite" aria-atomic="true"></p>
             <nav id="results-pages" class="flex items-center gap-1 text-[13px]"></nav>
@@ -147,6 +153,10 @@ import Layout from "../layouts/Layout.astro";
   import type MiniSearch from "minisearch";
   import { activityLabel } from "../lib/feed-catalog";
 
+  // Copy/copy-confirmed icons shared by feed cards and the copy-link handler.
+  const ICON_COPY = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+  const ICON_CHECK = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>`;
+
   // --- State ---
   let engine: MiniSearch<any>;
   let docs: DocEntry[];
@@ -167,6 +177,8 @@ import Layout from "../layouts/Layout.astro";
   const mainEl = document.getElementById("catalog-main")!;
   const headingEl = document.getElementById("catalog-heading")!;
   const leadEl = document.getElementById("catalog-lead")!;
+  const statsEl = document.getElementById("catalog-stats")!;
+  const liveEl = document.getElementById("catalog-live")!;
   const searchingEl = document.getElementById("catalog-searching")!;
   const searchInput = document.getElementById("catalog-search") as HTMLInputElement;
   const sortSelect = document.getElementById("catalog-sort") as HTMLSelectElement;
@@ -219,10 +231,14 @@ import Layout from "../layouts/Layout.astro";
       const statsMsg = `${indexData.stats.sources.toLocaleString()} sources · ${indexData.stats.topics} topics · ${indexData.stats.countries} countries`;
       loadingTextEl.textContent = `Ready — ${statsMsg} (${elapsed}s)`;
 
+      // Keep the on-page heading lead and stats line in sync with the
+      // manifest so the numbers never go stale.
+      leadEl.textContent = `Browse, search, and explore ${indexData.stats.sources.toLocaleString()} feeds.`;
+      statsEl.textContent = statsMsg;
+
       // Restore filters from URL hash
       loadFiltersFromHash();
 
-      renderAllFacets();
       applyAndRender();
       hideLoading();
     } catch (err) {
@@ -237,8 +253,8 @@ import Layout from "../layouts/Layout.astro";
     loadingEl.classList.add("hidden");
     errorEl.classList.add("hidden");
     mainEl.classList.remove("hidden");
-    headingEl.classList.add("hidden");
-    leadEl.classList.add("hidden");
+    // Heading and lead visibility is owned by renderHeading() — hiding them
+    // here would strip the page of its only h1 the moment the catalog loads.
   }
 
   function formatBytes(bytes: number): string {
@@ -290,10 +306,17 @@ import Layout from "../layouts/Layout.astro";
 
   // --- Facet rendering ---
 
-  function renderAllFacets() {
-    // Facet counts are intersected with the active search query so they
-    // reflect the current result set, not the whole catalog.
-    const counts = facetCounts(docs, filters, searchInput.value.trim(), engine);
+  // Guard against an older, slower facet render finishing after a newer one:
+  // only the most recent render is allowed to write to the DOM.
+  let facetRenderSeq = 0;
+
+  async function renderAllFacets(matchedSet: Set<number> | null) {
+    // Facet counts are intersected with the active search result set so they
+    // reflect the current results, not the whole catalog. Counting runs in
+    // chunks with yield points so typing never blocks the main thread.
+    const seq = ++facetRenderSeq;
+    const counts = await facetCounts(docs, filters, matchedSet);
+    if (seq !== facetRenderSeq) return; // superseded by a newer render
 
     // Topics — always open, shows subcategories when a topic is selected
     const topicsList = document.getElementById("facet-topics-list")!;
@@ -306,8 +329,11 @@ import Layout from "../layouts/Layout.astro";
       topicsBadge.textContent = filters.subcategory ? `(1 selected)` : `(${counts.topics.find(t => t.k === filters.topic)?.c ?? 0} in topic)`;
       topicsList.innerHTML = topic.sub
         .map(sub => {
-          const subCount = counts.topics.find(t => t.k === filters.topic);
-          return facetItem(sub.k, sub.c, filters.subcategory === sub.k, "subcategory");
+          // Intersect subcategory counts with the search query and the other
+          // active filters, like the topic badge above — the tree's static
+          // totals would mislead mid-search.
+          const sc = counts.subcategories.find(s => s.topic === topic.k && s.k === sub.k);
+          return facetItem(sub.k, sc?.c ?? 0, filters.subcategory === sub.k, "subcategory");
         })
         .join("");
       topicsList.querySelectorAll("[data-facet]").forEach(el => {
@@ -376,13 +402,31 @@ import Layout from "../layouts/Layout.astro";
       el.addEventListener("click", () => setFilter("mediaKind", el.getAttribute("data-facet-val")!));
     });
 
-    // Languages
+    // Languages — show top 20 with a "Show all" toggle, like countries. The
+    // list is computed from the current scope, so rare languages stay
+    // reachable mid-search instead of being capped out of existence.
     const langList = document.getElementById("facet-language-list")!;
     const langBadge = document.getElementById("facet-language-badge")!;
-    langBadge.textContent = filters.language ? `(1 selected)` : "";
-    langList.innerHTML = counts.languages
+    const SHOW_LANG_N = 20;
+    const visibleLangs = counts.languages.slice(0, SHOW_LANG_N);
+    const langHidden = counts.languages.length - SHOW_LANG_N;
+    langBadge.textContent = filters.language ? `(1 selected)` : `(${counts.languages.length})`;
+    langList.innerHTML = visibleLangs
       .map(l => facetItem(l.k, l.c, filters.language === l.k, "language"))
       .join("");
+    if (langHidden > 0) {
+      langList.innerHTML += `<button id="show-all-languages" class="mt-1 w-full text-left text-[11px] text-[#6b6b6b] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#6b6b6b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]">Show all ${counts.languages.length} languages&hellip;</button>`;
+      document.getElementById("show-all-languages")!.addEventListener("click", () => {
+        langList.innerHTML = counts.languages
+          .map(l => facetItem(l.k, l.c, filters.language === l.k, "language"))
+          .join("");
+        langList.querySelectorAll("[data-facet]").forEach(el => {
+          el.addEventListener("click", () => setFilter("language", el.getAttribute("data-facet")!));
+        });
+        // Keep keyboard focus inside the facet list instead of dropping to body
+        langList.querySelector<HTMLElement>("[data-facet]")?.focus();
+      });
+    }
     langList.querySelectorAll("[data-facet]").forEach(el => {
       el.addEventListener("click", () => setFilter("language", el.getAttribute("data-facet")!));
     });
@@ -479,7 +523,9 @@ import Layout from "../layouts/Layout.astro";
       const key = JSON.stringify([filters, searchInput.value.trim()]);
       if (key !== lastFacetKey) {
         lastFacetKey = key;
-        renderAllFacets();
+        // Reuse this search's matched ids for the facet counts (no second
+        // search) and run the chunked count off the critical path.
+        void renderAllFacets(searchResult.matchedIds);
       }
       searchingEl.classList.add("hidden");
     }
@@ -620,13 +666,23 @@ import Layout from "../layouts/Layout.astro";
         e.preventDefault();
         e.stopPropagation();
         const sourceId = btn.getAttribute("data-copy-link")!;
+        const originalLabel = btn.getAttribute("aria-label") ?? "Copy link";
         const url = `${window.location.origin}/feed?sourceId=${sourceId}`;
         navigator.clipboard.writeText(url).then(() => {
-          btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+          btn.innerHTML = ICON_CHECK;
+          btn.setAttribute("aria-label", "Link copied");
+          announce("Link copied");
           setTimeout(() => {
-            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+            btn.innerHTML = ICON_COPY;
+            btn.setAttribute("aria-label", originalLabel);
           }, 1500);
-        }).catch(() => {});
+        }).catch(() => {
+          btn.setAttribute("aria-label", "Copy failed — try again");
+          announce("Copying the link failed");
+          setTimeout(() => {
+            btn.setAttribute("aria-label", originalLabel);
+          }, 1500);
+        });
       });
     });
   }
@@ -674,7 +730,7 @@ import Layout from "../layouts/Layout.astro";
           aria-label="Copy link to ${escapeAttr(doc.t)}"
           title="Copy link"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          ${ICON_COPY}
         </button>
       </div>`;
   }
@@ -752,6 +808,13 @@ import Layout from "../layouts/Layout.astro";
 
   // --- Utils ---
 
+  // Announce transient feedback (e.g. copy-link results) to screen readers.
+  // Clearing first forces a re-announcement on repeat identical messages.
+  function announce(msg: string) {
+    liveEl.textContent = "";
+    setTimeout(() => { liveEl.textContent = msg; }, 50);
+  }
+
   function debounce(fn: () => void, delay: number): () => void {
     let timer: ReturnType<typeof setTimeout> | undefined;
     return () => { clearTimeout(timer); timer = setTimeout(fn, delay); };
@@ -782,8 +845,9 @@ import Layout from "../layouts/Layout.astro";
   });
 
   // Show a lightweight "Searching…" status during the debounce window so
-  // heavy re-renders never look like a frozen UI with zero feedback.
-  const debouncedSearch = debounce(() => { currentPage = 1; applyAndRender(); }, 200);
+  // heavy re-renders never look like a frozen UI with zero feedback. The
+  // window is long enough to absorb fast typing before the 43k-doc re-render.
+  const debouncedSearch = debounce(() => { currentPage = 1; applyAndRender(); }, 350);
   searchInput.addEventListener("input", () => {
     searchingEl.classList.remove("hidden");
     debouncedSearch();

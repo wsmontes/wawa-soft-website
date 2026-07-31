@@ -1,5 +1,5 @@
 import MiniSearch, { type SearchResult } from "minisearch";
-import { INDEX_BASE_URL } from "./feed-catalog";
+import { INDEX_BASE_URL, fetchCatalogManifest } from "./feed-catalog";
 
 const CATALOG_INDEX_URL = `${INDEX_BASE_URL}/catalog/catalog-index.json`;
 const PER_PAGE = 50;
@@ -50,17 +50,112 @@ export interface DocEntry {
  * Fetches the full catalog index. `onSize` fires as soon as the response
  * headers arrive, with the payload size in bytes (Content-Length) or null
  * if the server did not report it — used to show download size during load.
+ *
+ * The parsed index is cached in IndexedDB keyed by the manifest's `revision`
+ * stamp (the manifest has no `gen` field, but `revision` is bumped on every
+ * catalog regeneration, i.e. it is the generation stamp). On repeat visits
+ * the small manifest is re-fetched to revalidate the cache, so the ~16MB
+ * index download — and its re-parse — is skipped entirely when unchanged.
  */
 export async function fetchCatalogIndex(
   onSize?: (bytes: number | null) => void,
 ): Promise<CatalogIndex> {
+  // Revalidate against the tiny manifest first: its `revision` stamp tells
+  // us whether the cached index is still current.
+  let revision: number | null = null;
+  try {
+    revision = (await fetchCatalogManifest()).revision;
+  } catch {
+    // Manifest unavailable (offline, CDN hiccup) — fall through to the
+    // cache, then to the full download.
+  }
+
+  if (revision !== null) {
+    const cached = await readCachedIndex();
+    if (cached && cached.revision === revision) return cached.data;
+  }
+
   const response = await fetch(CATALOG_INDEX_URL);
   if (!response.ok) {
     throw new Error(`Failed to fetch catalog index: ${response.status}`);
   }
   const length = response.headers.get("Content-Length");
   onSize?.(length ? parseInt(length, 10) : null);
-  return response.json() as Promise<CatalogIndex>;
+  const data = (await response.json()) as CatalogIndex;
+  if (
+    revision !== null &&
+    data.v === INDEX_SCHEMA_VERSION &&
+    Array.isArray(data.docs) &&
+    data.docs.length > 0
+  ) {
+    writeCachedIndex({ gen: data.gen, revision, data });
+  }
+  return data;
+}
+
+// --- IndexedDB cache ------------------------------------------------------
+// The catalog index is a ~16MB JSON payload. Serving repeat visits from
+// IndexedDB (revalidated against the manifest's revision stamp) avoids
+// re-downloading and re-parsing it on every page load.
+
+const INDEX_SCHEMA_VERSION = 1;
+const CACHE_DB_NAME = "feedmine-catalog";
+const CACHE_STORE = "cache";
+const CACHE_KEY = "catalog-index";
+
+interface CacheEntry {
+  gen: string;
+  revision: number;
+  data: CatalogIndex;
+}
+
+function openCacheDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(CACHE_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains(CACHE_STORE)) {
+        req.result.createObjectStore(CACHE_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function readCachedIndex(): Promise<CacheEntry | null> {
+  return new Promise((resolve) => {
+    openCacheDb()
+      .then((db) => {
+        const req = db
+          .transaction(CACHE_STORE, "readonly")
+          .objectStore(CACHE_STORE)
+          .get(CACHE_KEY);
+        req.onsuccess = () => {
+          const entry = req.result as CacheEntry | undefined;
+          const data = entry?.data;
+          const usable =
+            data &&
+            data.v === INDEX_SCHEMA_VERSION &&
+            Array.isArray(data.docs) &&
+            data.docs.length > 0;
+          resolve(usable ? entry : null);
+        };
+        req.onerror = () => resolve(null);
+      })
+      .catch(() => resolve(null));
+  });
+}
+
+function writeCachedIndex(entry: CacheEntry): void {
+  openCacheDb()
+    .then((db) => {
+      db.transaction(CACHE_STORE, "readwrite")
+        .objectStore(CACHE_STORE)
+        .put(entry, CACHE_KEY);
+    })
+    .catch(() => {
+      // Caching is best-effort — never fail catalog loading over it.
+    });
 }
 
 export interface IndexedDoc {
@@ -166,11 +261,15 @@ export function applyFilters(
 
 /**
  * Full-text search intersecting with active filters.
- * Returns matching DocEntry objects with match terms for highlighting.
+ * Returns matching DocEntry objects with match terms for highlighting, plus
+ * the pre-filter matched doc indices so callers can reuse a single search
+ * for both the results and the facet counts.
  */
 export interface SearchResult {
   docs: DocEntry[];
   matchTerms: Map<number, string[]>; // doc index → matched terms
+  /** Doc indices matching the query, before filters. null when no query. */
+  matchedIds: Set<number> | null;
 }
 
 export function searchAndFilter(
@@ -183,31 +282,32 @@ export function searchAndFilter(
 
   if (!query.trim()) {
     const filtered = applyFilters(docs, filters);
-    return { docs: filtered, matchTerms };
+    return { docs: filtered, matchTerms, matchedIds: null };
   }
 
   const results = engine.search(query, { prefix: true, fuzzy: 0.2 });
-  const matchedIds = new Map<number, string[]>();
+  const termsById = new Map<number, string[]>();
   for (const r of results) {
     const id = r.id as number;
     const terms = Object.keys(r.match ?? {});
-    const existing = matchedIds.get(id) ?? [];
-    matchedIds.set(id, [...existing, ...terms]);
+    const existing = termsById.get(id) ?? [];
+    termsById.set(id, [...existing, ...terms]);
   }
+  const matchedIds = new Set(termsById.keys());
 
   const filtered = docs.filter((doc, i) => {
-    if (!matchedIds.has(i)) return false;
+    if (!termsById.has(i)) return false;
     if (filters.topic && doc.tp !== filters.topic) return false;
     if (filters.subcategory && doc.sc !== filters.subcategory) return false;
     if (filters.country && doc._co !== filters.country) return false;
     if (filters.mediaKind && doc.m !== filters.mediaKind) return false;
     if (filters.language && doc.l.toUpperCase() !== filters.language.toUpperCase()) return false;
     if (filters.activity && doc.a !== filters.activity) return false;
-    matchTerms.set(i, matchedIds.get(i)!);
+    matchTerms.set(i, termsById.get(i)!);
     return true;
   });
 
-  return { docs: filtered, matchTerms };
+  return { docs: filtered, matchTerms, matchedIds };
 }
 
 /** Highlight matched terms in text by wrapping them in <mark> tags. */
@@ -244,121 +344,143 @@ export function paginate(
 
 /**
  * Count how many docs match each facet value given the CURRENT filters
- * (excluding the facet being counted, so counts reflect what happens if you add that filter).
+ * (excluding the facet being counted, so counts reflect what happens if you
+ * add that filter).
  *
- * When `query` is non-empty and `engine` is provided, every facet count is
- * intersected with the search result set, so facet counts reflect the docs
- * the user is currently searching, not the whole catalog.
+ * `matchedSet` carries the doc indices matching the active search query
+ * (null when there is no query). Every count is intersected with it, so
+ * facet counts reflect the docs the user is currently searching, not the
+ * whole catalog. Callers pass the result of a single `searchAndFilter` call
+ * here so facets never trigger a second search.
+ *
+ * The count is computed in a single chunked pass with yield points so a
+ * 43k-doc recount never blocks the main thread for long.
  */
-export function facetCounts(
+export async function facetCounts(
   docs: DocEntry[],
   filters: FilterState,
-  query = "",
-  engine?: MiniSearch<IndexedDoc>,
-): {
-  topics: Array<{ k: string; c: number }>;
-  countries: Array<{ k: string; c: number }>;
-  mediaKinds: Array<{ k: string; c: number; label: string }>;
-  languages: Array<{ k: string; c: number }>;
-  activities: Array<{ k: string; c: number; label: string }>;
-} {
-  // Doc indices matching the active search query (unfiltered). Null = no query.
-  let matchedSet: Set<number> | null = null;
-  if (query.trim() && engine) {
-    matchedSet = new Set(engine.search(query.trim()).map((r) => r.id as number));
-  }
-  const inScope = (doc: DocEntry): boolean =>
-    !matchedSet || matchedSet.has((doc as any)._idx as number);
-
-  const baseFilters = { ...filters };
-
-  // Topics
-  baseFilters.topic = "";
-  baseFilters.subcategory = "";
+  matchedSet: Set<number> | null = null,
+): Promise<FacetCounts> {
   const topicCounts = new Map<string, number>();
-  for (const doc of applyFilters(docs, baseFilters)) {
-    if (!inScope(doc)) continue;
-    topicCounts.set(doc.tp, (topicCounts.get(doc.tp) ?? 0) + 1);
-  }
-  const topics = [...topicCounts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([k, c]) => ({ k, c }));
-
-  // Countries — uses _co field (enriched client-side from CountryNode data)
-  baseFilters.topic = filters.topic;
-  baseFilters.subcategory = filters.subcategory;
-  baseFilters.country = "";
+  const subCounts = new Map<string, number>(); // "topic sub" → count
   const countryCounts = new Map<string, number>();
-  for (const doc of applyFilters(docs, baseFilters)) {
-    if (!inScope(doc)) continue;
-    if (doc._co) countryCounts.set(doc._co, (countryCounts.get(doc._co) ?? 0) + 1);
+  const mediaCounts = new Map<string, number>();
+  const langCounts = new Map<string, number>();
+  const activityCounts = new Map<string, number>();
+
+  const CHUNK = 8000;
+  for (let i = 0; i < docs.length; i += CHUNK) {
+    const end = Math.min(i + CHUNK, docs.length);
+    for (let j = i; j < end; j++) {
+      const doc = docs[j];
+      if (matchedSet && !matchedSet.has((doc as any)._idx as number)) continue;
+
+      if (passesExcept(doc, filters, SKIP_TOPIC)) {
+        topicCounts.set(doc.tp, (topicCounts.get(doc.tp) ?? 0) + 1);
+        if (doc.sc) {
+          const key = `${doc.tp} ${doc.sc}`;
+          subCounts.set(key, (subCounts.get(key) ?? 0) + 1);
+        }
+      }
+      if (passesExcept(doc, filters, SKIP_COUNTRY) && doc._co) {
+        countryCounts.set(doc._co, (countryCounts.get(doc._co) ?? 0) + 1);
+      }
+      if (passesExcept(doc, filters, SKIP_MEDIA)) {
+        mediaCounts.set(doc.m, (mediaCounts.get(doc.m) ?? 0) + 1);
+      }
+      const lang = doc.l.trim().toUpperCase();
+      if (lang && passesExcept(doc, filters, SKIP_LANGUAGE)) {
+        langCounts.set(lang, (langCounts.get(lang) ?? 0) + 1);
+      }
+      if (passesExcept(doc, filters, SKIP_ACTIVITY)) {
+        activityCounts.set(doc.a, (activityCounts.get(doc.a) ?? 0) + 1);
+      }
+    }
+    if (end < docs.length) {
+      // Yield to the event loop so the UI stays responsive while typing.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
   }
-  // No hard cap here: the UI slices to 15 for display and expands to the full
-  // list on "Show all", so truncating would mislabel the total.
+
+  const sortByCount = (a: { k: string; c: number }, b: { k: string; c: number }) =>
+    b.c - a.c || a.k.localeCompare(b.k);
+
+  const topics = [...topicCounts.entries()]
+    .map(([k, c]) => ({ k, c }))
+    .sort(sortByCount);
+
+  const subcategories = [...subCounts.entries()]
+    .map(([key, c]) => {
+      const sep = key.indexOf(" ");
+      return { topic: key.slice(0, sep), k: key.slice(sep + 1), c };
+    })
+    .sort((a, b) => b.c - a.c || a.k.localeCompare(b.k));
+
+  // No hard cap here: the UI slices to 15 for display and expands to the
+  // full list on "Show all", so truncating would mislabel the total.
   const countries = [...countryCounts.entries()]
     .filter(([, c]) => c > 0)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([k, c]) => ({ k, c }));
+    .map(([k, c]) => ({ k, c }))
+    .sort(sortByCount);
 
-  // Media kinds
-  baseFilters.country = filters.country;
-  baseFilters.mediaKind = "";
   const mediaKindLabels: Record<string, string> = { text: "Text", audio: "Audio", video: "Video" };
-  const mediaCounts = new Map<string, number>();
-  for (const doc of applyFilters(docs, baseFilters)) {
-    if (!inScope(doc)) continue;
-    mediaCounts.set(doc.m, (mediaCounts.get(doc.m) ?? 0) + 1);
-  }
   const mediaKinds = [...mediaCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([k, c]) => ({ k, c, label: mediaKindLabels[k] ?? k }));
+    .map(([k, c]) => ({ k, c, label: mediaKindLabels[k] ?? k }))
+    .sort((a, b) => b.c - a.c || a.k.localeCompare(b.k));
 
-  // Languages
-  const langLabels = commonLanguages(docs);
-  baseFilters.mediaKind = filters.mediaKind;
-  baseFilters.language = "";
-  const langCounts = new Map<string, number>();
-  for (const doc of applyFilters(docs, baseFilters)) {
-    if (!inScope(doc)) continue;
-    const lang = doc.l.trim().toUpperCase();
-    if (!lang) continue;
-    langCounts.set(lang, (langCounts.get(lang) ?? 0) + 1);
-  }
-  const languages = langLabels
-    .filter((l) => (langCounts.get(l) ?? 0) > 0)
-    .map((k) => ({ k, c: langCounts.get(k) ?? 0 }));
+  // Languages are computed from the current scope (query + other filters)
+  // rather than a global top-20 list, so any language in scope is reachable
+  // in the facet, no matter how rare it is globally.
+  const languages = [...langCounts.entries()]
+    .map(([k, c]) => ({ k, c }))
+    .sort(sortByCount);
 
-  // Activities
-  baseFilters.language = filters.language;
-  baseFilters.activity = "";
   const activityLabels: Record<string, string> = {
     prolific: "Prolific",
     active: "Active",
     quiet: "Quiet",
     dormant: "Dormant",
   };
-  const activityCounts = new Map<string, number>();
-  for (const doc of applyFilters(docs, baseFilters)) {
-    if (!inScope(doc)) continue;
-    activityCounts.set(doc.a, (activityCounts.get(doc.a) ?? 0) + 1);
-  }
   const activities = [...activityCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([k, c]) => ({ k, c, label: activityLabels[k] ?? k }));
+    .map(([k, c]) => ({ k, c, label: activityLabels[k] ?? k }))
+    .sort((a, b) => b.c - a.c || a.k.localeCompare(b.k));
 
-  return { topics, countries, mediaKinds, languages, activities };
+  return { topics, subcategories, countries, mediaKinds, languages, activities };
 }
 
-export function commonLanguages(docs: DocEntry[]): string[] {
-  const counts = new Map<string, number>();
-  for (const doc of docs) {
-    const lang = doc.l.trim();
-    if (!lang) continue;
-    const key = lang.toUpperCase();
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 20)
-    .map(([lang]) => lang);
+export interface FacetCounts {
+  topics: Array<{ k: string; c: number }>;
+  /** Subcategory counts keyed by parent topic, intersected like `topics`. */
+  subcategories: Array<{ topic: string; k: string; c: number }>;
+  countries: Array<{ k: string; c: number }>;
+  mediaKinds: Array<{ k: string; c: number; label: string }>;
+  languages: Array<{ k: string; c: number }>;
+  activities: Array<{ k: string; c: number; label: string }>;
+}
+
+/** Facet filters skipped when counting a facet — each facet is counted with
+ *  itself excluded so the number reflects what happens if you add it. */
+const SKIP_TOPIC = { topic: true, subcategory: true };
+const SKIP_COUNTRY = { country: true };
+const SKIP_MEDIA = { mediaKind: true };
+const SKIP_LANGUAGE = { language: true };
+const SKIP_ACTIVITY = { activity: true };
+
+function passesExcept(doc: DocEntry, f: FilterState, skip: FacetSkip): boolean {
+  if (!skip.topic && f.topic && doc.tp !== f.topic) return false;
+  if (!skip.subcategory && f.subcategory && doc.sc !== f.subcategory) return false;
+  if (!skip.country && f.country && doc._co !== f.country) return false;
+  if (!skip.mediaKind && f.mediaKind && doc.m !== f.mediaKind) return false;
+  if (!skip.language && f.language && doc.l.toUpperCase() !== f.language.toUpperCase()) return false;
+  if (!skip.activity && f.activity && doc.a !== f.activity) return false;
+  return true;
+}
+
+interface FacetSkip {
+  topic?: boolean;
+  subcategory?: boolean;
+  country?: boolean;
+  mediaKind?: boolean;
+  language?: boolean;
+  activity?: boolean;
 }
