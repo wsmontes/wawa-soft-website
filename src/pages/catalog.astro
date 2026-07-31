@@ -7,100 +7,89 @@ import Layout from "../layouts/Layout.astro";
   description="Browse, search, and explore 43,000+ feeds in the FeedMine catalog."
 >
   <div id="catalog-root" class="pb-16 pt-8">
-    <!-- Breadcrumb -->
-    <nav id="catalog-breadcrumb" aria-label="Breadcrumb" class="text-[13px] text-[#6b6b6b]">
-      <span class="text-[#1a1a1a]">Catalog</span>
-    </nav>
+    <!-- Static heading while loading -->
+    <h1 class="text-[15px] font-medium text-[#1a1a1a]" id="catalog-heading">Catalog</h1>
 
     <!-- Loading state -->
-    <div id="catalog-loading" class="mt-8">
+    <div id="catalog-loading" class="mt-6">
       <div class="animate-pulse space-y-3">
-        <div class="h-5 w-48 rounded bg-[#e8e4dd]"></div>
-        <div class="h-4 w-64 rounded bg-[#e8e4dd]"></div>
+        <div class="h-10 w-full rounded-lg bg-[#e8e4dd]"></div>
+        <div class="h-5 w-64 rounded bg-[#e8e4dd]"></div>
       </div>
-      <p class="mt-4 text-[14px] text-[#8a8a8a]" id="catalog-loading-text">
-        Loading catalog...
-      </p>
+      <p class="mt-4 text-[14px] text-[#8a8a8a]" id="catalog-loading-text">Loading catalog...</p>
     </div>
 
     <!-- Error state -->
     <div id="catalog-error" class="mt-16 hidden text-center">
-      <p class="text-[15px] text-[#5c5c5c]">
-        Could not load the catalog. It may be temporarily unavailable.
-      </p>
-      <button
-        id="catalog-retry"
-        class="mt-4 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]"
-      >
-        Retry
-      </button>
+      <p class="text-[15px] text-[#5c5c5c]">Could not load the catalog. It may be temporarily unavailable.</p>
+      <button id="catalog-retry" class="mt-4 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]">Retry</button>
     </div>
 
     <!-- Main content (hidden until loaded) -->
-    <div id="catalog-main" class="mt-8 hidden">
+    <div id="catalog-main" class="mt-6 hidden">
       <!-- Search bar -->
-      <div class="relative mb-4">
-        <input
-          id="catalog-search"
-          type="text"
-          placeholder="Search sources, topics, keywords..."
-          class="w-full rounded-lg border border-[#d4d0c8] bg-white px-4 py-2.5 text-[14px] text-[#1a1a1a] placeholder:text-[#8a8a8a] outline-none transition-colors focus:border-[#b0aba0]"
-        />
-      </div>
+      <input
+        id="catalog-search"
+        type="text"
+        placeholder="Search sources, topics, keywords..."
+        class="w-full rounded-lg border border-[#d4d0c8] bg-white px-4 py-2.5 text-[14px] text-[#1a1a1a] placeholder:text-[#8a8a8a] outline-none transition-colors focus:border-[#b0aba0]"
+      />
 
-      <!-- Filters -->
-      <div class="mb-6 flex flex-wrap gap-3">
-        <select id="filter-media" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] text-[#1a1a1a] outline-none">
-          <option value="">All media</option>
-          <option value="text">Text</option>
-          <option value="audio">Audio</option>
-          <option value="video">Video</option>
-        </select>
-        <select id="filter-language" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] text-[#1a1a1a] outline-none">
-          <option value="">All languages</option>
-        </select>
-        <select id="filter-activity" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] text-[#1a1a1a] outline-none">
-          <option value="">All activity</option>
-          <option value="prolific">Prolific</option>
-          <option value="active">Active</option>
-          <option value="quiet">Quiet</option>
-          <option value="dormant">Dormant</option>
-        </select>
-      </div>
-
-      <!-- Mobile sidebar toggle -->
-      <button
-        id="catalog-sidebar-toggle"
-        type="button"
-        class="mb-4 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef] sm:hidden"
-        aria-expanded="false"
-        aria-controls="catalog-sidebar"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="m6 9 6 6 6-6"/></svg>
-        Browse topics &amp; countries
-      </button>
+      <!-- Active filter chips -->
+      <div id="catalog-chips" class="mt-3 flex flex-wrap items-center gap-2"></div>
 
       <!-- Two-column layout -->
-      <div class="flex flex-col gap-8 sm:flex-row">
-        <!-- Sidebar -->
-        <aside id="catalog-sidebar" class="hidden w-full shrink-0 sm:block sm:w-[220px]">
-          <!-- Browse by Topic -->
-          <div>
-            <h2 class="text-[13px] font-medium text-[#1a1a1a]">Browse by Topic</h2>
-            <nav id="topic-nav" class="mt-2 space-y-0.5"></nav>
-          </div>
-          <!-- Browse by Country -->
-          <div class="mt-6">
-            <h2 class="text-[13px] font-medium text-[#1a1a1a]">Browse by Country</h2>
-            <nav id="country-nav" class="mt-2 max-h-[300px] space-y-0.5 overflow-y-auto"></nav>
+      <div class="mt-6 flex flex-col gap-8 sm:flex-row">
+        <!-- Sidebar: facets -->
+        <aside class="w-full shrink-0 sm:w-[220px]">
+          <!-- Mobile toggle -->
+          <button id="sidebar-toggle" type="button"
+            class="mb-3 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef] sm:hidden"
+            aria-expanded="false" aria-controls="sidebar-facets">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="m6 9 6 6 6-6"/></svg>
+            Filters
+          </button>
+
+          <div id="sidebar-facets" class="hidden space-y-5 sm:block">
+            <!-- Topics accordion -->
+            <details open id="facet-topics" class="group">
+              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">Topics</summary>
+              <div id="facet-topics-list" class="mt-1.5 max-h-[320px] space-y-0.5 overflow-y-auto"></div>
+            </details>
+
+            <!-- Countries accordion -->
+            <details id="facet-countries" class="group">
+              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">Countries</summary>
+              <div id="facet-countries-list" class="mt-1.5 max-h-[260px] space-y-0.5 overflow-y-auto"></div>
+            </details>
+
+            <!-- Media accordion -->
+            <details id="facet-media" class="group">
+              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">Media</summary>
+              <div id="facet-media-list" class="mt-1.5 space-y-0.5"></div>
+            </details>
+
+            <!-- Language accordion -->
+            <details id="facet-language" class="group">
+              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">Language</summary>
+              <div id="facet-language-list" class="mt-1.5 max-h-[260px] space-y-0.5 overflow-y-auto"></div>
+            </details>
+
+            <!-- Activity accordion -->
+            <details id="facet-activity" class="group">
+              <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">Activity</summary>
+              <div id="facet-activity-list" class="mt-1.5 space-y-0.5"></div>
+            </details>
           </div>
         </aside>
 
         <!-- Results -->
-        <main id="catalog-results" class="min-w-0 flex-1">
-          <div id="results-header" class="mb-4"></div>
+        <main class="min-w-0 flex-1">
           <div id="results-list" class="space-y-2"></div>
-          <p id="results-count" class="mt-4 text-[13px] text-[#8a8a8a]"></p>
+          <div id="results-footer" class="mt-5 flex items-center justify-between gap-4">
+            <p id="results-count" class="text-[13px] text-[#8a8a8a]"></p>
+            <nav id="results-pages" class="flex items-center gap-1 text-[13px]"></nav>
+          </div>
         </main>
       </div>
     </div>
@@ -111,30 +100,23 @@ import Layout from "../layouts/Layout.astro";
   import {
     fetchCatalogIndex,
     createSearchEngine,
-    filterDocs,
-    searchDocs,
-    commonLanguages,
+    applyFilters,
+    searchAndFilter,
+    paginate,
+    facetCounts,
+    emptyFilters,
   } from "../lib/catalog-index";
-  import type {
-    DocEntry,
-    TreeNode,
-    SubcategoryNode,
-    CountryNode,
-    IndexedDoc,
-    FilterState,
-  } from "../lib/catalog-index";
+  import type { DocEntry, TreeNode, SubcategoryNode, FilterState } from "../lib/catalog-index";
   import type MiniSearch from "minisearch";
   import { activityLabel } from "../lib/feed-catalog";
 
   // --- State ---
-  let engine: MiniSearch<IndexedDoc>;
+  let engine: MiniSearch<any>;
   let docs: DocEntry[];
-  let currentView: "topic" | "subcategory" | "country" | "search" | "none" = "none";
-  let currentIndices: number[] = [];
-  let currentBreadcrumb = "";
-  let currentTopic: TreeNode | null = null;
-  let currentContext = ""; // subcategory or country label for the count footer
-  let currentSegments: Array<{ label: string; action?: () => void }> = [];
+  let indexData: import("../lib/catalog-index").CatalogIndex;
+  let filters: FilterState = emptyFilters();
+  let currentPage = 1;
+  let currentResults: DocEntry[] = [];
 
   // --- DOM refs ---
   const loadingEl = document.getElementById("catalog-loading")!;
@@ -142,328 +124,299 @@ import Layout from "../layouts/Layout.astro";
   const errorEl = document.getElementById("catalog-error")!;
   const retryBtn = document.getElementById("catalog-retry")!;
   const mainEl = document.getElementById("catalog-main")!;
+  const headingEl = document.getElementById("catalog-heading")!;
   const searchInput = document.getElementById("catalog-search") as HTMLInputElement;
-  const filterMedia = document.getElementById("filter-media") as HTMLSelectElement;
-  const filterLanguage = document.getElementById("filter-language") as HTMLSelectElement;
-  const filterActivity = document.getElementById("filter-activity") as HTMLSelectElement;
-  const topicNavEl = document.getElementById("topic-nav")!;
-  const countryNavEl = document.getElementById("country-nav")!;
-  const resultsHeaderEl = document.getElementById("results-header")!;
+  const chipsEl = document.getElementById("catalog-chips")!;
   const resultsListEl = document.getElementById("results-list")!;
   const resultsCountEl = document.getElementById("results-count")!;
-  const sidebarEl = document.getElementById("catalog-sidebar")!;
-  const sidebarToggle = document.getElementById("catalog-sidebar-toggle")!;
+  const resultsPagesEl = document.getElementById("results-pages")!;
+  const sidebarEl = document.getElementById("sidebar-facets")!;
+  const sidebarToggle = document.getElementById("sidebar-toggle")!;
 
-  // --- State transitions ---
-
-  function showLoading(message: string) {
-    loadingTextEl.textContent = message;
-    errorEl.classList.add("hidden");
-    mainEl.classList.add("hidden");
-    loadingEl.classList.remove("hidden");
+  // --- Init ---
+  async function init() {
+    try {
+      loadingTextEl.textContent = "Loading catalog...";
+      indexData = await fetchCatalogIndex();
+      docs = indexData.docs;
+      engine = createSearchEngine(docs);
+      renderAllFacets();
+      applyAndRender();
+      showMain();
+    } catch (err) {
+      console.error("Could not load the catalog:", err);
+      loadingEl.classList.add("hidden");
+      errorEl.classList.remove("hidden");
+    }
   }
 
   function showMain() {
     loadingEl.classList.add("hidden");
     errorEl.classList.add("hidden");
     mainEl.classList.remove("hidden");
+    headingEl.classList.add("hidden");
   }
 
-  function showError() {
-    loadingEl.classList.add("hidden");
-    mainEl.classList.add("hidden");
-    errorEl.classList.remove("hidden");
-  }
+  // --- Facet rendering ---
 
-  // --- Init ---
+  function renderAllFacets() {
+    const counts = facetCounts(docs, filters);
 
-  async function init() {
-    showLoading("Loading catalog...");
-    try {
-      const index = await fetchCatalogIndex();
-      docs = index.docs;
-      engine = createSearchEngine(docs);
-      renderTopicNav(index.tree);
-      renderCountryNav(index.countries);
-      populateLanguageFilter(commonLanguages(docs));
-      showMain();
-      restoreBrowseView();
-    } catch (err) {
-      console.error("Could not load the catalog:", err);
-      showError();
+    // Topics
+    const topicsList = document.getElementById("facet-topics-list")!;
+    const topic = indexData.tree.find(t => t.k === filters.topic);
+    if (filters.topic && topic) {
+      // Show subcategories when a topic is selected
+      topicsList.innerHTML = topic.sub
+        .map(sub => facetItem(sub.k, sub.c, filters.subcategory === sub.k, "subcategory"))
+        .join("");
+      topicsList.querySelectorAll("[data-facet]").forEach(el => {
+        el.addEventListener("click", () => setFilter("subcategory", el.getAttribute("data-facet")!));
+      });
+    } else {
+      topicsList.innerHTML = counts.topics
+        .map(t => facetItem(t.k, t.c, filters.topic === t.k, "topic"))
+        .join("");
+      topicsList.querySelectorAll("[data-facet]").forEach(el => {
+        el.addEventListener("click", () => setFilter("topic", el.getAttribute("data-facet")!));
+      });
     }
-  }
 
-  // --- Sidebar ---
-
-  function renderTopicNav(topics: TreeNode[]) {
-    topicNavEl.innerHTML = topics
-      .map(
-        (topic) => `
-        <a
-          href="#"
-          data-topic="${escapeAttr(topic.k)}"
-          class="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-[13px] text-[#1a1a1a] transition-colors hover:bg-[#f5f3ef]"
-        >
-          <span class="truncate">${escapeHtml(topic.k)}</span>
-          <span class="shrink-0 font-mono text-[11px] text-[#8a8a8a]">${topic.c.toLocaleString()}</span>
-        </a>`,
-      )
+    // Countries
+    const countriesList = document.getElementById("facet-countries-list")!;
+    countriesList.innerHTML = counts.countries
+      .map(c => facetItem(c.k, c.c, filters.country === c.k, "country"))
       .join("");
+    countriesList.querySelectorAll("[data-facet]").forEach(el => {
+      el.addEventListener("click", () => setFilter("country", el.getAttribute("data-facet")!));
+    });
 
-    topicNavEl.querySelectorAll<HTMLAnchorElement>("[data-topic]").forEach((link) => {
-      link.addEventListener("click", (event) => {
-        event.preventDefault();
-        const topic = topics.find((t) => t.k === link.dataset.topic);
-        if (topic) selectTopic(topic);
-      });
+    // Media
+    const mediaList = document.getElementById("facet-media-list")!;
+    mediaList.innerHTML = counts.mediaKinds
+      .map(m => facetItem(m.label, m.c, filters.mediaKind === m.k, "media", m.k))
+      .join("");
+    mediaList.querySelectorAll("[data-facet]").forEach(el => {
+      el.addEventListener("click", () => setFilter("mediaKind", el.getAttribute("data-facet-val")!));
+    });
+
+    // Languages
+    const langList = document.getElementById("facet-language-list")!;
+    langList.innerHTML = counts.languages
+      .map(l => facetItem(l.k, l.c, filters.language === l.k, "language"))
+      .join("");
+    langList.querySelectorAll("[data-facet]").forEach(el => {
+      el.addEventListener("click", () => setFilter("language", el.getAttribute("data-facet")!));
+    });
+
+    // Activities
+    const actList = document.getElementById("facet-activity-list")!;
+    actList.innerHTML = counts.activities
+      .map(a => facetItem(a.label, a.c, filters.activity === a.k, "activity", a.k))
+      .join("");
+    actList.querySelectorAll("[data-facet]").forEach(el => {
+      el.addEventListener("click", () => setFilter("activity", el.getAttribute("data-facet-val")!));
     });
   }
 
-  function selectTopic(topic: TreeNode) {
-    currentTopic = topic;
-    currentView = "topic";
-    currentIndices = topic.sub.flatMap((sub) => sub.docs);
-    currentContext = topic.k;
-    breadcrumb([{ label: "Catalog", action: restoreBrowseView }, { label: topic.k }]);
-    renderFeedCards(currentIndices, getFilters(), topic.k);
+  function facetItem(label: string, count: number, active: boolean, _kind: string, value?: string): string {
+    const val = value ?? label;
+    const activeClass = active
+      ? "bg-[#f0ede7] text-[#1a1a1a] font-medium"
+      : "text-[#5c5c5c] hover:bg-[#f5f3ef] hover:text-[#1a1a1a]";
+    return `
+      <button
+        data-facet="${escapeAttr(label)}"
+        data-facet-val="${escapeAttr(val)}"
+        class="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-[12px] transition-colors ${activeClass}"
+      >
+        <span class="truncate">${escapeHtml(label)}</span>
+        <span class="shrink-0 font-mono text-[11px] text-[#8a8a8a]">${count.toLocaleString()}</span>
+      </button>`;
   }
 
-  function renderCountryNav(countries: CountryNode[]) {
-    countryNavEl.innerHTML = countries
-      .map(
-        (country) => `
-        <a
-          href="#"
-          data-country="${escapeAttr(country.k)}"
-          class="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-[13px] text-[#1a1a1a] transition-colors hover:bg-[#f5f3ef]"
-        >
-          <span class="truncate">${escapeHtml(country.k)}</span>
-          <span class="shrink-0 font-mono text-[11px] text-[#8a8a8a]">${country.c.toLocaleString()}</span>
-        </a>`,
-      )
-      .join("");
+  // --- Filter logic ---
 
-    countryNavEl.querySelectorAll<HTMLAnchorElement>("[data-country]").forEach((link) => {
-      link.addEventListener("click", (event) => {
-        event.preventDefault();
-        const country = countries.find((c) => c.k === link.dataset.country);
-        if (country) selectCountry(country);
+  function setFilter(key: keyof FilterState, value: string) {
+    if (filters[key] === value) {
+      // Deselect
+      filters = { ...filters, [key]: "" };
+      // If deselecting topic, also clear subcategory
+      if (key === "topic") filters.subcategory = "";
+    } else {
+      filters = { ...filters, [key]: value };
+      // Selecting a topic clears subcategory
+      if (key === "topic") filters.subcategory = "";
+      // Selecting a subcategory sets the topic implicitly
+      if (key === "subcategory") {
+        const parent = indexData.tree.find(t => t.sub.some(s => s.k === value));
+        if (parent) filters.topic = parent.k;
+      }
+    }
+    currentPage = 1;
+    applyAndRender();
+  }
+
+  function removeFilter(key: keyof FilterState) {
+    filters = { ...filters, [key]: "" };
+    if (key === "topic") filters.subcategory = "";
+    currentPage = 1;
+    applyAndRender();
+  }
+
+  function clearAllFilters() {
+    filters = emptyFilters();
+    currentPage = 1;
+    (document.getElementById("catalog-search") as HTMLInputElement).value = "";
+    applyAndRender();
+  }
+
+  // --- Apply & render ---
+
+  function applyAndRender() {
+    const query = searchInput.value;
+    currentResults = searchAndFilter(query, engine, docs, filters);
+    const page = paginate(currentResults, currentPage);
+    renderChips();
+    renderAllFacets();
+    renderResults(page.items);
+    renderPagination(page);
+    renderHeading();
+  }
+
+  // --- Chips ---
+
+  function renderChips() {
+    const chips: Array<{ label: string; key: keyof FilterState; value: string }> = [];
+    const mediaLabels: Record<string, string> = { text: "Text", audio: "Audio", video: "Video" };
+    const activityLabels: Record<string, string> = { prolific: "Prolific", active: "Active", quiet: "Quiet", dormant: "Dormant" };
+
+    if (filters.topic) chips.push({ label: filters.topic, key: "topic", value: filters.topic });
+    if (filters.subcategory) chips.push({ label: filters.subcategory, key: "subcategory", value: filters.subcategory });
+    if (filters.country) chips.push({ label: filters.country, key: "country", value: filters.country });
+    if (filters.mediaKind) chips.push({ label: mediaLabels[filters.mediaKind] ?? filters.mediaKind, key: "mediaKind", value: filters.mediaKind });
+    if (filters.language) chips.push({ label: filters.language, key: "language", value: filters.language });
+    if (filters.activity) chips.push({ label: activityLabels[filters.activity] ?? filters.activity, key: "activity", value: filters.activity });
+
+    if (chips.length === 0) {
+      chipsEl.innerHTML = "";
+      return;
+    }
+
+    chipsEl.innerHTML =
+      chips
+        .map(
+          (c) => `
+        <span class="inline-flex items-center gap-1 rounded-full border border-[#d4d0c8] bg-[#f5f3ef] px-2.5 py-1 text-[12px] text-[#1a1a1a]">
+          ${escapeHtml(c.label)}
+          <button data-chip-key="${c.key}" class="inline-flex items-center text-[#8a8a8a] hover:text-[#1a1a1a]" aria-label="Remove ${escapeAttr(c.label)} filter">&times;</button>
+        </span>`,
+        )
+        .join("") +
+      `<button id="clear-all-filters" class="text-[12px] text-[#6b6b6b] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">Clear all</button>`;
+
+    chipsEl.querySelectorAll<HTMLButtonElement>("[data-chip-key]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        removeFilter(btn.getAttribute("data-chip-key") as keyof FilterState);
       });
     });
-  }
 
-  function selectCountry(country: CountryNode) {
-    currentTopic = null;
-    currentView = "country";
-    currentIndices = country.docs;
-    currentContext = country.k;
-    breadcrumb([{ label: "Catalog", action: restoreBrowseView }, { label: "Countries" }, { label: country.k }]);
-    renderFeedCards(country.docs, getFilters(), country.k);
+    document.getElementById("clear-all-filters")?.addEventListener("click", clearAllFilters);
   }
 
   // --- Results ---
 
-  function renderSubcategories(topic: TreeNode) {
-    const filters = getFilters();
-    const items = topic.sub.map((sub) => ({
-      sub,
-      filtered: filterDocs(sub.docs, docs, filters),
-    }));
-    const total = items.reduce((sum, item) => sum + item.filtered.length, 0);
-
-    breadcrumb([{ label: "Catalog", action: restoreBrowseView }, { label: topic.k }]);
-
-    if (total === 0) {
-      renderEmpty("No sources match your search/filters.");
+  function renderResults(items: DocEntry[]) {
+    if (items.length === 0) {
+      resultsListEl.innerHTML = `<p class="text-[14px] leading-relaxed text-[#5c5c5c]">No sources match your filters.</p>`;
       return;
     }
-
-    resultsListEl.innerHTML = items
-      .map(
-        (item) => `
-        <a
-          href="#"
-          data-subcategory="${escapeAttr(item.sub.k)}"
-          class="flex items-center justify-between gap-3 rounded-lg border border-[#e8e4dd] p-3 transition-colors hover:border-[#d4d0c8] hover:bg-[#f5f3ef]"
-        >
-          <span class="min-w-0">
-            <span class="block truncate text-[14px] font-medium text-[#1a1a1a]">${escapeHtml(item.sub.k)}</span>
-            <span class="mt-0.5 block font-mono text-[11px] uppercase tracking-wider text-[#8a8a8a]">${item.filtered.length.toLocaleString()} ${item.filtered.length === 1 ? "source" : "sources"}</span>
-          </span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-[#8a8a8a]"><path d="m9 18 6-6-6-6"/></svg>
-        </a>`,
-      )
-      .join("");
-
-    resultsListEl.querySelectorAll<HTMLAnchorElement>("[data-subcategory]").forEach((link) => {
-      link.addEventListener("click", (event) => {
-        event.preventDefault();
-        const sub = topic.sub.find((s) => s.k === link.dataset.subcategory);
-        if (sub) selectSubcategory(topic, sub);
-      });
-    });
-
-    updateResultsCount(total, `across ${items.length.toLocaleString()} ${items.length === 1 ? "subcategory" : "subcategories"}`);
-  }
-
-  function selectSubcategory(topic: TreeNode, sub: SubcategoryNode) {
-    currentView = "subcategory";
-    currentIndices = sub.docs;
-    currentContext = sub.k;
-    breadcrumb([{ label: "Catalog", action: restoreBrowseView }, { label: topic.k, action: () => selectTopic(topic) }, { label: sub.k }]);
-    renderFeedCards(sub.docs, getFilters(), sub.k);
-  }
-
-  function renderFeedCards(indices: number[], filters: FilterState, context = "") {
-    renderCardsFromDocs(filterDocs(indices, docs, filters), context);
-  }
-
-  function renderSearchResults(results: IndexedDoc[]) {
-    renderCardsFromDocs(results, "");
-  }
-
-  function renderCardsFromDocs(list: DocEntry[], context: string) {
-    if (list.length === 0) {
-      renderEmpty("No sources match your search/filters.");
-      return;
-    }
-    resultsListEl.innerHTML = list.map(feedCard).join("");
-    if (context) {
-      updateResultsCount(list.length, `in ${escapeHtml(context)}`);
-    } else {
-      updateResultsCount(list.length);
-    }
+    resultsListEl.innerHTML = items.map(feedCard).join("");
   }
 
   function feedCard(doc: DocEntry): string {
-    const metaParts = [doc.l, doc.sc, activityLabel(doc.a)].filter(Boolean);
-    const metaHtml = metaParts.length
-      ? `<span class="inline-flex flex-wrap items-center gap-x-2">${metaParts
-          .map((part) => escapeHtml(part))
-          .join('<span aria-hidden="true" class="text-[#d4d0c8]">·</span>')}</span>`
-      : "";
-    const description = escapeHtml(doc.d).trim();
-    const descriptionHtml = description
-      ? `<span class="mt-1 block text-[13px] leading-relaxed text-[#5c5c5c]">${description.substring(0, 140)}</span>`
-      : "";
+    const description = escapeHtml(doc.d).trim().substring(0, 140);
+    const mediaLabel = doc.m === "audio" ? "Audio" : doc.m === "video" ? "Video" : "Text";
 
     return `
-      <a
-        href="/feed?sourceId=${escapeAttr(doc.s)}"
-        class="block rounded-lg border border-[#e8e4dd] p-3 transition-colors hover:border-[#d4d0c8] hover:bg-[#f5f3ef]"
-      >
+      <a href="/feed?sourceId=${escapeAttr(doc.s)}"
+         class="block rounded-lg border border-[#e8e4dd] p-3 transition-colors hover:border-[#d4d0c8] hover:bg-[#f5f3ef]">
         <span class="block truncate text-[14px] font-medium text-[#1a1a1a]">${escapeHtml(doc.t)}</span>
         <span class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-[#6b6b6b]">
           ${mediaBadge(doc.m)}
-          ${metaHtml}
+          ${escapeHtml(mediaLabel)}
+          <span aria-hidden="true" class="text-[#d4d0c8]">·</span>
+          ${escapeHtml(doc.l.toUpperCase())}
+          <span aria-hidden="true" class="text-[#d4d0c8]">·</span>
+          ${escapeHtml(doc.sc || doc.tp)}
+          <span aria-hidden="true" class="text-[#d4d0c8]">·</span>
+          ${escapeHtml(activityLabel(doc.a))}
         </span>
-        ${descriptionHtml}
+        ${description ? `<span class="mt-1 block text-[13px] leading-relaxed text-[#5c5c5c]">${description}</span>` : ""}
       </a>`;
   }
 
-  function renderEmpty(message: string) {
-    resultsListEl.innerHTML = `<p class="text-[14px] leading-relaxed text-[#5c5c5c]">${escapeHtml(message)}</p>`;
-    updateResultsCount(0);
-  }
+  // --- Pagination ---
 
-  // --- Search & filters ---
+  function renderPagination(page: ReturnType<typeof paginate>) {
+    resultsCountEl.innerHTML = page.total === 0
+      ? "No results"
+      : `Showing ${((page.page - 1) * 50) + 1}&ndash;${Math.min(page.page * 50, page.total)} of ${page.total.toLocaleString()} sources`;
 
-  function handleSearch() {
-    const query = searchInput.value;
-    if (!query.trim()) {
-      restoreBrowseView();
+    if (page.pages <= 1) {
+      resultsPagesEl.innerHTML = "";
       return;
     }
-    currentView = "search";
-    const results = searchDocs(query, engine, getFilters());
-    if (results.length === 0) {
-      renderEmpty("No sources match your search/filters.");
+
+    let html = "";
+    html += pageButton(page.page > 1, page.page - 1, "&larr; Prev");
+    for (let p = 1; p <= page.pages; p++) {
+      if (p === 1 || p === page.pages || (p >= page.page - 2 && p <= page.page + 2)) {
+        html += pageNumber(p, p === page.page);
+      } else if (p === page.page - 3 || p === page.page + 3) {
+        html += `<span class="px-1 text-[#8a8a8a]">&hellip;</span>`;
+      }
+    }
+    html += pageButton(page.page < page.pages, page.page + 1, "Next &rarr;");
+    resultsPagesEl.innerHTML = html;
+
+    resultsPagesEl.querySelectorAll<HTMLButtonElement>("[data-page]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentPage = parseInt(btn.getAttribute("data-page")!, 10);
+        applyAndRender();
+        resultsListEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  }
+
+  function pageButton(enabled: boolean, page: number, label: string): string {
+    if (!enabled) return `<span class="px-2 py-1 text-[#c4bfb4]">${label}</span>`;
+    return `<button data-page="${page}" class="rounded px-2 py-1 text-[#6b6b6b] transition-colors hover:bg-[#f5f3ef] hover:text-[#1a1a1a]">${label}</button>`;
+  }
+
+  function pageNumber(p: number, current: boolean): string {
+    if (current) return `<span class="rounded bg-[#f0ede7] px-2 py-1 font-medium text-[#1a1a1a]">${p}</span>`;
+    return `<button data-page="${p}" class="rounded px-2 py-1 text-[#6b6b6b] transition-colors hover:bg-[#f5f3ef] hover:text-[#1a1a1a]">${p}</button>`;
+  }
+
+  function renderHeading() {
+    const query = searchInput.value.trim();
+    if (query) {
+      headingEl.innerHTML = `Results for &ldquo;${escapeHtml(query)}&rdquo;`;
+      headingEl.classList.remove("hidden");
+    } else if (!filters.topic && !filters.country && !filters.mediaKind && !filters.language && !filters.activity) {
+      headingEl.textContent = "Catalog";
+      headingEl.classList.remove("hidden");
     } else {
-      renderSearchResults(results);
-    }
-    breadcrumb([{ label: "Catalog", action: restoreBrowseView }, { label: `Search: "${query}"` }]);
-    updateResultsCount(results.length, `&middot; results for &quot;${escapeHtml(query)}&quot;`);
-  }
-
-  function restoreBrowseView() {
-    currentView = "none";
-    currentIndices = [];
-    currentTopic = null;
-    currentContext = "";
-    breadcrumb([{ label: "Catalog" }]);
-    resultsListEl.innerHTML =
-      `<p class="text-[14px] leading-relaxed text-[#5c5c5c]">Choose a topic or country to start browsing, or search the catalog.</p>`;
-    updateResultsCount();
-  }
-
-  function handleFilterChange() {
-    if (currentView === "search") {
-      handleSearch();
-    } else if (currentView === "topic" || currentView === "subcategory" || currentView === "country") {
-      renderFeedCards(currentIndices, getFilters(), currentContext);
+      headingEl.classList.add("hidden");
     }
   }
-
-  function getFilters(): FilterState {
-    return {
-      mediaKind: filterMedia.value,
-      language: filterLanguage.value,
-      activity: filterActivity.value,
-    };
-  }
-
-  function populateLanguageFilter(languages: string[]) {
-    filterLanguage.innerHTML =
-      `<option value="">All languages</option>` +
-      languages
-        .map((lang) => `<option value="${escapeAttr(lang)}">${escapeHtml(lang)}</option>`)
-        .join("");
-  }
-
-  function updateResultsCount(count?: number, context?: string) {
-    if (count === undefined) {
-      resultsCountEl.innerHTML = `${docs.length.toLocaleString()} sources in the catalog`;
-      return;
-    }
-    resultsCountEl.innerHTML = `Showing ${count.toLocaleString()} sources${context ? ` ${context}` : ""}`;
-  }
-
-  const breadcrumbEl = document.getElementById("catalog-breadcrumb")!;
-
-  /** Renders clickable breadcrumb segments. Uses event delegation on the nav. */
-  function breadcrumb(segments: Array<{ label: string; action?: () => void }>) {
-    currentSegments = segments;
-    currentBreadcrumb = segments.map((s) => s.label).join(" > ");
-    breadcrumbEl.innerHTML = segments
-      .map((seg, i) => {
-        const isLast = i === segments.length - 1;
-        if (isLast || !seg.action) {
-          return `<span class="text-[#1a1a1a]">${escapeHtml(seg.label)}</span>`;
-        }
-        return `<a href="#" data-bc="${i}" class="underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">${escapeHtml(seg.label)}</a>`;
-      })
-      .join(` <span aria-hidden="true" class="text-[#d4d0c8]">&gt;</span> `);
-  }
-
-  // Single delegated click handler — never needs re-binding
-  breadcrumbEl.addEventListener("click", (e) => {
-    const link = (e.target as HTMLElement).closest<HTMLAnchorElement>("[data-bc]");
-    if (!link) return;
-    e.preventDefault();
-    const idx = parseInt(link.getAttribute("data-bc") ?? "", 10);
-    if (isNaN(idx)) return;
-    currentSegments[idx]?.action?.();
-  });
 
   // --- Utils ---
 
   function debounce(fn: () => void, delay: number): () => void {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    return () => {
-      clearTimeout(timer);
-      timer = setTimeout(fn, delay);
-    };
+    return () => { clearTimeout(timer); timer = setTimeout(fn, delay); };
   }
 
   function escapeHtml(s: string): string {
@@ -476,16 +429,10 @@ import Layout from "../layouts/Layout.astro";
     return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
-  /** Inline SVG badge: speaker (audio), play (video), document (text). */
   function mediaBadge(m: string): string {
-    const common =
-      'xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-[#8a8a8a]"';
-    if (m === "audio") {
-      return `<svg ${common} role="img" aria-label="Audio"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>`;
-    }
-    if (m === "video") {
-      return `<svg ${common} role="img" aria-label="Video"><polygon points="6 3 20 12 6 21 6 3"/></svg>`;
-    }
+    const common = 'xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-[#8a8a8a]"';
+    if (m === "audio") return `<svg ${common} role="img" aria-label="Audio"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>`;
+    if (m === "video") return `<svg ${common} role="img" aria-label="Video"><polygon points="6 3 20 12 6 21 6 3"/></svg>`;
     return `<svg ${common} role="img" aria-label="Text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`;
   }
 
@@ -496,13 +443,8 @@ import Layout from "../layouts/Layout.astro";
     sidebarToggle.setAttribute("aria-expanded", String(!isHidden));
   });
 
-  searchInput.addEventListener("input", debounce(handleSearch, 200));
-  filterMedia.addEventListener("change", handleFilterChange);
-  filterLanguage.addEventListener("change", handleFilterChange);
-  filterActivity.addEventListener("change", handleFilterChange);
-  retryBtn.addEventListener("click", () => {
-    void init();
-  });
+  searchInput.addEventListener("input", debounce(() => { currentPage = 1; applyAndRender(); }, 200));
+  retryBtn.addEventListener("click", () => { location.reload(); });
 
   void init();
 </script>
