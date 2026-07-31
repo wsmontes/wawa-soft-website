@@ -1,0 +1,490 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+  title="FeedMine Catalog"
+  description="Browse, search, and explore 43,000+ feeds in the FeedMine catalog."
+>
+  <div id="catalog-root" class="pb-16 pt-8">
+    <!-- Breadcrumb -->
+    <a
+      href="/feedmine"
+      class="inline-flex items-center gap-1 text-[13px] text-[#6b6b6b] transition-colors hover:text-[#1a1a1a]"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      FeedMine Catalog
+    </a>
+
+    <!-- Loading state -->
+    <div id="catalog-loading" class="mt-8">
+      <div class="animate-pulse space-y-3">
+        <div class="h-5 w-48 rounded bg-[#e8e4dd]"></div>
+        <div class="h-4 w-64 rounded bg-[#e8e4dd]"></div>
+      </div>
+      <p class="mt-4 text-[14px] text-[#8a8a8a]" id="catalog-loading-text">
+        Loading catalog...
+      </p>
+    </div>
+
+    <!-- Error state -->
+    <div id="catalog-error" class="mt-16 hidden text-center">
+      <p class="text-[15px] text-[#5c5c5c]">
+        Could not load the catalog. It may be temporarily unavailable.
+      </p>
+      <button
+        id="catalog-retry"
+        class="mt-4 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]"
+      >
+        Retry
+      </button>
+    </div>
+
+    <!-- Main content (hidden until loaded) -->
+    <div id="catalog-main" class="mt-8 hidden">
+      <!-- Search bar -->
+      <div class="relative mb-4">
+        <input
+          id="catalog-search"
+          type="text"
+          placeholder="Search sources, topics, keywords..."
+          class="w-full rounded-lg border border-[#d4d0c8] bg-white px-4 py-2.5 text-[14px] text-[#1a1a1a] placeholder:text-[#8a8a8a] outline-none transition-colors focus:border-[#b0aba0]"
+        />
+      </div>
+
+      <!-- Filters -->
+      <div class="mb-6 flex flex-wrap gap-3">
+        <select id="filter-media" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] text-[#1a1a1a] outline-none">
+          <option value="">All media</option>
+          <option value="text">Text</option>
+          <option value="audio">Audio</option>
+          <option value="video">Video</option>
+        </select>
+        <select id="filter-language" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] text-[#1a1a1a] outline-none">
+          <option value="">All languages</option>
+        </select>
+        <select id="filter-activity" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] text-[#1a1a1a] outline-none">
+          <option value="">All activity</option>
+          <option value="prolific">Prolific</option>
+          <option value="active">Active</option>
+          <option value="quiet">Quiet</option>
+          <option value="dormant">Dormant</option>
+        </select>
+      </div>
+
+      <!-- Mobile sidebar toggle -->
+      <button
+        id="catalog-sidebar-toggle"
+        type="button"
+        class="mb-4 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef] sm:hidden"
+        aria-expanded="false"
+        aria-controls="catalog-sidebar"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="m6 9 6 6 6-6"/></svg>
+        Browse topics &amp; countries
+      </button>
+
+      <!-- Two-column layout -->
+      <div class="flex flex-col gap-8 sm:flex-row">
+        <!-- Sidebar -->
+        <aside id="catalog-sidebar" class="hidden w-full shrink-0 sm:block sm:w-[220px]">
+          <!-- Browse by Topic -->
+          <div>
+            <h2 class="text-[13px] font-medium text-[#1a1a1a]">Browse by Topic</h2>
+            <nav id="topic-nav" class="mt-2 space-y-0.5"></nav>
+          </div>
+          <!-- Browse by Country -->
+          <div class="mt-6">
+            <h2 class="text-[13px] font-medium text-[#1a1a1a]">Browse by Country</h2>
+            <nav id="country-nav" class="mt-2 max-h-[300px] space-y-0.5 overflow-y-auto"></nav>
+          </div>
+        </aside>
+
+        <!-- Results -->
+        <main id="catalog-results" class="min-w-0 flex-1">
+          <div id="results-header" class="mb-4"></div>
+          <div id="results-list" class="space-y-2"></div>
+          <p id="results-count" class="mt-4 text-[13px] text-[#8a8a8a]"></p>
+        </main>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import {
+    fetchCatalogIndex,
+    createSearchEngine,
+    filterDocs,
+    searchDocs,
+    commonLanguages,
+  } from "../lib/catalog-index";
+  import type {
+    DocEntry,
+    TreeNode,
+    SubcategoryNode,
+    CountryNode,
+    IndexedDoc,
+    FilterState,
+  } from "../lib/catalog-index";
+  import type MiniSearch from "minisearch";
+  import { activityLabel } from "../lib/feed-catalog";
+
+  // --- State ---
+  let engine: MiniSearch<IndexedDoc>;
+  let docs: DocEntry[];
+  let currentView: "topic" | "subcategory" | "country" | "search" | "none" = "none";
+  let currentIndices: number[] = [];
+  let currentBreadcrumb = "";
+  let currentTopic: TreeNode | null = null;
+  let currentContext = ""; // subcategory or country label for the count footer
+
+  // --- DOM refs ---
+  const loadingEl = document.getElementById("catalog-loading")!;
+  const loadingTextEl = document.getElementById("catalog-loading-text")!;
+  const errorEl = document.getElementById("catalog-error")!;
+  const retryBtn = document.getElementById("catalog-retry")!;
+  const mainEl = document.getElementById("catalog-main")!;
+  const searchInput = document.getElementById("catalog-search") as HTMLInputElement;
+  const filterMedia = document.getElementById("filter-media") as HTMLSelectElement;
+  const filterLanguage = document.getElementById("filter-language") as HTMLSelectElement;
+  const filterActivity = document.getElementById("filter-activity") as HTMLSelectElement;
+  const topicNavEl = document.getElementById("topic-nav")!;
+  const countryNavEl = document.getElementById("country-nav")!;
+  const resultsHeaderEl = document.getElementById("results-header")!;
+  const resultsListEl = document.getElementById("results-list")!;
+  const resultsCountEl = document.getElementById("results-count")!;
+  const sidebarEl = document.getElementById("catalog-sidebar")!;
+  const sidebarToggle = document.getElementById("catalog-sidebar-toggle")!;
+
+  // --- State transitions ---
+
+  function showLoading(message: string) {
+    loadingTextEl.textContent = message;
+    errorEl.classList.add("hidden");
+    mainEl.classList.add("hidden");
+    loadingEl.classList.remove("hidden");
+  }
+
+  function showMain() {
+    loadingEl.classList.add("hidden");
+    errorEl.classList.add("hidden");
+    mainEl.classList.remove("hidden");
+  }
+
+  function showError() {
+    loadingEl.classList.add("hidden");
+    mainEl.classList.add("hidden");
+    errorEl.classList.remove("hidden");
+  }
+
+  // --- Init ---
+
+  async function init() {
+    showLoading("Loading catalog...");
+    try {
+      const index = await fetchCatalogIndex();
+      docs = index.docs;
+      engine = createSearchEngine(docs);
+      renderTopicNav(index.tree);
+      renderCountryNav(index.countries);
+      populateLanguageFilter(commonLanguages(docs));
+      showMain();
+      restoreBrowseView();
+    } catch (err) {
+      console.error("Could not load the catalog:", err);
+      showError();
+    }
+  }
+
+  // --- Sidebar ---
+
+  function renderTopicNav(topics: TreeNode[]) {
+    topicNavEl.innerHTML = topics
+      .map(
+        (topic) => `
+        <a
+          href="#"
+          data-topic="${escapeAttr(topic.k)}"
+          class="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-[13px] text-[#1a1a1a] transition-colors hover:bg-[#f5f3ef]"
+        >
+          <span class="truncate">${escapeHtml(topic.k)}</span>
+          <span class="shrink-0 font-mono text-[11px] text-[#8a8a8a]">${topic.c.toLocaleString()}</span>
+        </a>`,
+      )
+      .join("");
+
+    topicNavEl.querySelectorAll<HTMLAnchorElement>("[data-topic]").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        const topic = topics.find((t) => t.k === link.dataset.topic);
+        if (topic) selectTopic(topic);
+      });
+    });
+  }
+
+  function selectTopic(topic: TreeNode) {
+    currentTopic = topic;
+    currentView = "topic";
+    currentIndices = topic.sub.flatMap((sub) => sub.docs);
+    currentContext = "";
+    renderSubcategories(topic);
+  }
+
+  function renderCountryNav(countries: CountryNode[]) {
+    countryNavEl.innerHTML = countries
+      .map(
+        (country) => `
+        <a
+          href="#"
+          data-country="${escapeAttr(country.k)}"
+          class="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-[13px] text-[#1a1a1a] transition-colors hover:bg-[#f5f3ef]"
+        >
+          <span class="truncate">${escapeHtml(country.k)}</span>
+          <span class="shrink-0 font-mono text-[11px] text-[#8a8a8a]">${country.c.toLocaleString()}</span>
+        </a>`,
+      )
+      .join("");
+
+    countryNavEl.querySelectorAll<HTMLAnchorElement>("[data-country]").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        const country = countries.find((c) => c.k === link.dataset.country);
+        if (country) selectCountry(country);
+      });
+    });
+  }
+
+  function selectCountry(country: CountryNode) {
+    currentTopic = null;
+    currentView = "country";
+    currentIndices = country.docs;
+    currentContext = country.k;
+    breadcrumb(`Catalog > Countries > ${escapeHtml(country.k)}`);
+    renderFeedCards(country.docs, getFilters(), country.k);
+  }
+
+  // --- Results ---
+
+  function renderSubcategories(topic: TreeNode) {
+    const filters = getFilters();
+    const items = topic.sub.map((sub) => ({
+      sub,
+      filtered: filterDocs(sub.docs, docs, filters),
+    }));
+    const total = items.reduce((sum, item) => sum + item.filtered.length, 0);
+
+    breadcrumb(`Catalog > ${escapeHtml(topic.k)}`);
+
+    if (total === 0) {
+      renderEmpty("No sources match your search/filters.");
+      return;
+    }
+
+    resultsListEl.innerHTML = items
+      .map(
+        (item) => `
+        <a
+          href="#"
+          data-subcategory="${escapeAttr(item.sub.k)}"
+          class="flex items-center justify-between gap-3 rounded-lg border border-[#e8e4dd] p-3 transition-colors hover:border-[#d4d0c8] hover:bg-[#f5f3ef]"
+        >
+          <span class="min-w-0">
+            <span class="block truncate text-[14px] font-medium text-[#1a1a1a]">${escapeHtml(item.sub.k)}</span>
+            <span class="mt-0.5 block font-mono text-[11px] uppercase tracking-wider text-[#8a8a8a]">${item.filtered.length.toLocaleString()} ${item.filtered.length === 1 ? "source" : "sources"}</span>
+          </span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-[#8a8a8a]"><path d="m9 18 6-6-6-6"/></svg>
+        </a>`,
+      )
+      .join("");
+
+    resultsListEl.querySelectorAll<HTMLAnchorElement>("[data-subcategory]").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        const sub = topic.sub.find((s) => s.k === link.dataset.subcategory);
+        if (sub) selectSubcategory(topic, sub);
+      });
+    });
+
+    updateResultsCount(total, `across ${items.length.toLocaleString()} ${items.length === 1 ? "subcategory" : "subcategories"}`);
+  }
+
+  function selectSubcategory(topic: TreeNode, sub: SubcategoryNode) {
+    currentView = "subcategory";
+    currentIndices = sub.docs;
+    currentContext = sub.k;
+    breadcrumb(`Catalog > ${escapeHtml(topic.k)} > ${escapeHtml(sub.k)}`);
+    renderFeedCards(sub.docs, getFilters(), sub.k);
+  }
+
+  function renderFeedCards(indices: number[], filters: FilterState, context = "") {
+    renderCardsFromDocs(filterDocs(indices, docs, filters), context);
+  }
+
+  function renderSearchResults(results: IndexedDoc[]) {
+    renderCardsFromDocs(results, "");
+  }
+
+  function renderCardsFromDocs(list: DocEntry[], context: string) {
+    if (list.length === 0) {
+      renderEmpty("No sources match your search/filters.");
+      return;
+    }
+    resultsListEl.innerHTML = list.map(feedCard).join("");
+    if (context) {
+      updateResultsCount(list.length, `in ${escapeHtml(context)}`);
+    } else {
+      updateResultsCount(list.length);
+    }
+  }
+
+  function feedCard(doc: DocEntry): string {
+    const metaParts = [doc.l, doc.sc, activityLabel(doc.a)].filter(Boolean);
+    const metaHtml = metaParts.length
+      ? `<span class="inline-flex flex-wrap items-center gap-x-2">${metaParts
+          .map((part) => escapeHtml(part))
+          .join('<span aria-hidden="true" class="text-[#d4d0c8]">·</span>')}</span>`
+      : "";
+    const description = escapeHtml(doc.d).trim();
+    const descriptionHtml = description
+      ? `<span class="mt-1 block text-[13px] leading-relaxed text-[#5c5c5c]">${description.substring(0, 140)}</span>`
+      : "";
+
+    return `
+      <a
+        href="/feed?sourceId=${escapeAttr(doc.s)}"
+        class="block rounded-lg border border-[#e8e4dd] p-3 transition-colors hover:border-[#d4d0c8] hover:bg-[#f5f3ef]"
+      >
+        <span class="block truncate text-[14px] font-medium text-[#1a1a1a]">${escapeHtml(doc.t)}</span>
+        <span class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-[#6b6b6b]">
+          ${mediaBadge(doc.m)}
+          ${metaHtml}
+        </span>
+        ${descriptionHtml}
+      </a>`;
+  }
+
+  function renderEmpty(message: string) {
+    resultsListEl.innerHTML = `<p class="text-[14px] leading-relaxed text-[#5c5c5c]">${escapeHtml(message)}</p>`;
+    updateResultsCount(0);
+  }
+
+  // --- Search & filters ---
+
+  function handleSearch() {
+    const query = searchInput.value;
+    if (!query.trim()) {
+      restoreBrowseView();
+      return;
+    }
+    currentView = "search";
+    const results = searchDocs(query, engine, getFilters());
+    if (results.length === 0) {
+      renderEmpty("No sources match your search/filters.");
+    } else {
+      renderSearchResults(results);
+    }
+    breadcrumb(`Catalog > Search: &quot;${escapeHtml(query)}&quot;`);
+    updateResultsCount(results.length, `&middot; results for &quot;${escapeHtml(query)}&quot;`);
+  }
+
+  function restoreBrowseView() {
+    currentView = "none";
+    currentIndices = [];
+    currentTopic = null;
+    currentContext = "";
+    breadcrumb("Catalog");
+    resultsListEl.innerHTML =
+      `<p class="text-[14px] leading-relaxed text-[#5c5c5c]">Choose a topic or country to start browsing, or search the catalog.</p>`;
+    updateResultsCount();
+  }
+
+  function handleFilterChange() {
+    if (currentView === "search") {
+      handleSearch(); // re-run search with new filters
+    } else if (currentView === "subcategory" || currentView === "country") {
+      renderFeedCards(currentIndices, getFilters(), currentContext);
+    } else if (currentView === "topic" && currentTopic) {
+      renderSubcategories(currentTopic);
+    }
+  }
+
+  function getFilters(): FilterState {
+    return {
+      mediaKind: filterMedia.value,
+      language: filterLanguage.value,
+      activity: filterActivity.value,
+    };
+  }
+
+  function populateLanguageFilter(languages: string[]) {
+    filterLanguage.innerHTML =
+      `<option value="">All languages</option>` +
+      languages
+        .map((lang) => `<option value="${escapeAttr(lang)}">${escapeHtml(lang)}</option>`)
+        .join("");
+  }
+
+  function updateResultsCount(count?: number, context?: string) {
+    if (count === undefined) {
+      resultsCountEl.innerHTML = `${docs.length.toLocaleString()} sources in the catalog`;
+      return;
+    }
+    resultsCountEl.innerHTML = `Showing ${count.toLocaleString()} sources${context ? ` ${context}` : ""}`;
+  }
+
+  function breadcrumb(text: string) {
+    currentBreadcrumb = text;
+    resultsHeaderEl.innerHTML = `<h2 class="text-[15px] font-medium text-[#1a1a1a]">${text}</h2>`;
+  }
+
+  // --- Utils ---
+
+  function debounce(fn: () => void, delay: number): () => void {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    return () => {
+      clearTimeout(timer);
+      timer = setTimeout(fn, delay);
+    };
+  }
+
+  function escapeHtml(s: string): string {
+    const div = document.createElement("div");
+    div.appendChild(document.createTextNode(s));
+    return div.innerHTML;
+  }
+
+  function escapeAttr(s: string): string {
+    return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  /** Inline SVG badge: speaker (audio), play (video), document (text). */
+  function mediaBadge(m: string): string {
+    const common =
+      'xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-[#8a8a8a]"';
+    if (m === "audio") {
+      return `<svg ${common} role="img" aria-label="Audio"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>`;
+    }
+    if (m === "video") {
+      return `<svg ${common} role="img" aria-label="Video"><polygon points="6 3 20 12 6 21 6 3"/></svg>`;
+    }
+    return `<svg ${common} role="img" aria-label="Text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`;
+  }
+
+  // --- Events ---
+
+  sidebarToggle.addEventListener("click", () => {
+    const isHidden = sidebarEl.classList.toggle("hidden");
+    sidebarToggle.setAttribute("aria-expanded", String(!isHidden));
+  });
+
+  searchInput.addEventListener("input", debounce(handleSearch, 200));
+  filterMedia.addEventListener("change", handleFilterChange);
+  filterLanguage.addEventListener("change", handleFilterChange);
+  filterActivity.addEventListener("change", handleFilterChange);
+  retryBtn.addEventListener("click", () => {
+    void init();
+  });
+
+  void init();
+</script>
