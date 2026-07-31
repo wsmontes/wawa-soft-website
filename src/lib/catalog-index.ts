@@ -139,7 +139,7 @@ export function commonLanguages(docs: DocEntry[]): string[] {
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, 20)
     .map(([lang]) => lang);
 }
