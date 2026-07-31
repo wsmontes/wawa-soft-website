@@ -4,6 +4,8 @@ export interface FeedRecord {
   description: string;
   xmlUrl: string;
   htmlUrl: string | null;
+  /** OPML `type` attribute ("rss", "atom", …). Not present in index shards yet. */
+  type?: string;
   language: string;
   category: string;
   feedmineSourceId: string;
