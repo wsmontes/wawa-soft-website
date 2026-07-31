@@ -8,7 +8,8 @@ import Layout from "../layouts/Layout.astro";
 >
   <div id="catalog-root" class="pb-16 pt-8">
     <!-- Heading -->
-    <h1 class="text-[15px] font-medium text-[#1a1a1a]" id="catalog-heading">Catalog</h1>
+    <h1 class="text-[28px] font-medium leading-tight tracking-tight text-[#1a1a1a] sm:text-[32px]" id="catalog-heading">Catalog</h1>
+    <p id="catalog-lead" class="mt-2 text-[15px] text-[#6b6b6b]">Browse, search, and explore 43,000+ feeds.</p>
 
     <!-- Loading state -->
     <div id="catalog-loading" class="mt-6">
@@ -20,13 +21,13 @@ import Layout from "../layouts/Layout.astro";
         </div>
         <div class="h-64 w-full rounded-lg bg-[#e8e4dd]"></div>
       </div>
-      <p class="mt-4 text-[14px] text-[#8a8a8a]" id="catalog-loading-text">Loading catalog&hellip;</p>
+      <p class="mt-4 text-[14px] text-[#6b6b6b]" id="catalog-loading-text" role="status" aria-live="polite">Loading catalog&hellip;</p>
     </div>
 
     <!-- Error state -->
-    <div id="catalog-error" class="mt-16 hidden text-center">
-      <p class="text-[15px] text-[#5c5c5c]">Could not load the catalog. It may be temporarily unavailable.</p>
-      <button id="catalog-retry" class="mt-4 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]">Retry</button>
+    <div id="catalog-error" class="mt-16 hidden text-center" role="alert">
+      <p class="text-[15px] text-[#5c5c5c]">Could not load the catalog. The index is a large download (tens of MB) &mdash; on slow connections it can take a while. Please check your connection and try again.</p>
+      <button id="catalog-retry" class="mt-4 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[14px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]">Retry</button>
     </div>
 
     <!-- Main content (hidden until loaded) -->
@@ -34,28 +35,32 @@ import Layout from "../layouts/Layout.astro";
       <!-- Toolbar: search + sort + per-page -->
       <div class="flex flex-col gap-3 sm:flex-row">
         <div class="relative flex-1">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8a8a8a] pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6b6b6b] pointer-events-none" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <label for="catalog-search" class="sr-only">Search sources</label>
           <input
             id="catalog-search"
             type="text"
-            placeholder="Search 43,000+ sources&hellip;"
-            class="w-full rounded-lg border border-[#d4d0c8] bg-white py-2.5 pl-10 pr-4 text-[14px] text-[#1a1a1a] placeholder:text-[#8a8a8a] outline-none transition-colors focus:border-[#b0aba0]"
+            placeholder="Search titles, topics, keywords&hellip;"
+            class="w-full rounded-lg border border-[#d4d0c8] bg-white py-2.5 pl-10 pr-4 text-[14px] text-[#1a1a1a] placeholder:text-[#6b6b6b] transition-colors focus:border-[#6b6b6b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]"
           />
-          <kbd class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden rounded border border-[#d4d0c8] px-1.5 py-0.5 text-[11px] text-[#8a8a8a] sm:inline-block">/</kbd>
+          <kbd class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden rounded border border-[#d4d0c8] px-1.5 py-0.5 text-[11px] text-[#6b6b6b] sm:inline-block">/</kbd>
         </div>
         <div class="flex gap-2">
-          <select id="catalog-sort" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-2 text-[13px] text-[#1a1a1a] outline-none">
-            <option value="">Sort: Default</option>
+          <select id="catalog-sort" aria-label="Sort order" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-2 text-[13px] text-[#1a1a1a] transition-colors focus:border-[#6b6b6b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]">
+            <option value="">Default</option>
             <option value="az">Name A&ndash;Z</option>
             <option value="za">Name Z&ndash;A</option>
           </select>
-          <select id="catalog-perpage" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-2 text-[13px] text-[#1a1a1a] outline-none">
-            <option value="25">25</option>
-            <option value="50" selected>50</option>
-            <option value="100">100</option>
+          <select id="catalog-perpage" aria-label="Results per page" class="rounded-md border border-[#d4d0c8] bg-white px-3 py-2 text-[13px] text-[#1a1a1a] transition-colors focus:border-[#6b6b6b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]">
+            <option value="25">25 per page</option>
+            <option value="50" selected>50 per page</option>
+            <option value="100">100 per page</option>
           </select>
         </div>
       </div>
+
+      <!-- Searching status (aria-live) -->
+      <p id="catalog-searching" class="mt-2 hidden text-[14px] text-[#6b6b6b]" role="status" aria-live="polite">Searching&hellip;</p>
 
       <!-- Active filter chips -->
       <div id="catalog-chips" class="mt-3 flex flex-wrap items-center gap-2"></div>
@@ -65,44 +70,44 @@ import Layout from "../layouts/Layout.astro";
         <!-- Sidebar: facets -->
         <aside class="w-full shrink-0 sm:w-[220px]">
           <button id="sidebar-toggle" type="button"
-            class="mb-3 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef] sm:hidden"
+            class="mb-3 inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] bg-white px-3 py-1.5 text-[13px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b] sm:hidden"
             aria-expanded="false" aria-controls="sidebar-facets">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="m6 9 6 6 6-6"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
             Filters
           </button>
 
           <div id="sidebar-facets" class="hidden space-y-5 sm:block">
             <details open id="facet-topics" class="group">
               <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">
-                Topics <span id="facet-topics-badge" class="font-normal text-[#8a8a8a]"></span>
+                Topics <span id="facet-topics-badge" class="font-normal text-[#6b6b6b]"></span>
               </summary>
               <div id="facet-topics-list" class="mt-1.5 max-h-[320px] space-y-0.5 overflow-y-auto"></div>
             </details>
 
             <details id="facet-countries" class="group">
               <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">
-                Countries <span id="facet-countries-badge" class="font-normal text-[#8a8a8a]"></span>
+                Countries <span id="facet-countries-badge" class="font-normal text-[#6b6b6b]"></span>
               </summary>
               <div id="facet-countries-list" class="mt-1.5 max-h-[260px] space-y-0.5 overflow-y-auto"></div>
             </details>
 
             <details id="facet-media" class="group">
               <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">
-                Media <span id="facet-media-badge" class="font-normal text-[#8a8a8a]"></span>
+                Media <span id="facet-media-badge" class="font-normal text-[#6b6b6b]"></span>
               </summary>
               <div id="facet-media-list" class="mt-1.5 space-y-0.5"></div>
             </details>
 
             <details id="facet-language" class="group">
               <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">
-                Language <span id="facet-language-badge" class="font-normal text-[#8a8a8a]"></span>
+                Language <span id="facet-language-badge" class="font-normal text-[#6b6b6b]"></span>
               </summary>
               <div id="facet-language-list" class="mt-1.5 max-h-[260px] space-y-0.5 overflow-y-auto"></div>
             </details>
 
             <details id="facet-activity" class="group">
               <summary class="cursor-pointer text-[13px] font-medium text-[#1a1a1a] select-none">
-                Activity <span id="facet-activity-badge" class="font-normal text-[#8a8a8a]"></span>
+                Activity <span id="facet-activity-badge" class="font-normal text-[#6b6b6b]"></span>
               </summary>
               <div id="facet-activity-list" class="mt-1.5 space-y-0.5"></div>
             </details>
@@ -112,12 +117,12 @@ import Layout from "../layouts/Layout.astro";
         <!-- Results -->
         <main class="min-w-0 flex-1">
           <div id="results-header" class="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p id="results-count-top" class="text-[13px] text-[#8a8a8a]"></p>
+            <p id="results-count-top" class="text-[14px] text-[#6b6b6b]"></p>
             <nav id="results-pages-top" class="flex items-center gap-1 text-[13px]"></nav>
           </div>
-          <div id="results-list" class="space-y-1.5"></div>
+          <div id="results-list" tabindex="-1" class="space-y-2 outline-none"></div>
           <div id="results-footer" class="mt-5 flex flex-wrap items-center justify-between gap-2">
-            <p id="results-count" class="text-[13px] text-[#8a8a8a]"></p>
+            <p id="results-count" class="text-[14px] text-[#6b6b6b]" role="status" aria-live="polite" aria-atomic="true"></p>
             <nav id="results-pages" class="flex items-center gap-1 text-[13px]"></nav>
           </div>
         </main>
@@ -161,6 +166,8 @@ import Layout from "../layouts/Layout.astro";
   const retryBtn = document.getElementById("catalog-retry")!;
   const mainEl = document.getElementById("catalog-main")!;
   const headingEl = document.getElementById("catalog-heading")!;
+  const leadEl = document.getElementById("catalog-lead")!;
+  const searchingEl = document.getElementById("catalog-searching")!;
   const searchInput = document.getElementById("catalog-search") as HTMLInputElement;
   const sortSelect = document.getElementById("catalog-sort") as HTMLSelectElement;
   const perPageSelect = document.getElementById("catalog-perpage") as HTMLSelectElement;
@@ -187,20 +194,30 @@ import Layout from "../layouts/Layout.astro";
         loadingTextEl.textContent = `Loading ${mani.sourceCount.toLocaleString()} sources across ${mani.fileCount} files…`;
       }).catch(()=>{})).catch(()=>{});
 
-      indexData = await fetchCatalogIndex();
+      // Report the payload size as soon as headers arrive — the full index is
+      // tens of MB, so a plain "loading" spinner makes it look hung.
+      loadingTextEl.textContent = "Downloading catalog index…";
+      indexData = await fetchCatalogIndex((bytes) => {
+        if (bytes) loadingTextEl.textContent = `Downloading ${formatBytes(bytes)} index…`;
+      });
 
       clearInterval(ticker);
-      const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-      const statsMsg = `${indexData.stats.sources.toLocaleString()} sources · ${indexData.stats.topics} topics · ${indexData.stats.countries} countries`;
-      loadingTextEl.textContent = `Ready — ${statsMsg} (${elapsed}s)`;
-
       docs = indexData.docs;
       docCountryMap = buildDocCountryMap(indexData.countries);
       for (let i = 0; i < docs.length; i++) {
         (docs[i] as any)._co = docCountryMap.get(i) ?? "";
         (docs[i] as any)._idx = i;
       }
-      engine = createSearchEngine(docs);
+
+      // Build the search index in chunks with yield points so the loading
+      // UI keeps animating instead of freezing for seconds.
+      engine = await createSearchEngine(docs, (done, total) => {
+        loadingTextEl.textContent = `Indexing ${done.toLocaleString()} of ${total.toLocaleString()} sources…`;
+      });
+
+      const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+      const statsMsg = `${indexData.stats.sources.toLocaleString()} sources · ${indexData.stats.topics} topics · ${indexData.stats.countries} countries`;
+      loadingTextEl.textContent = `Ready — ${statsMsg} (${elapsed}s)`;
 
       // Restore filters from URL hash
       loadFiltersFromHash();
@@ -212,6 +229,7 @@ import Layout from "../layouts/Layout.astro";
       console.error("Could not load the catalog:", err);
       loadingEl.classList.add("hidden");
       errorEl.classList.remove("hidden");
+      retryBtn.focus();
     }
   }
 
@@ -220,6 +238,12 @@ import Layout from "../layouts/Layout.astro";
     errorEl.classList.add("hidden");
     mainEl.classList.remove("hidden");
     headingEl.classList.add("hidden");
+    leadEl.classList.add("hidden");
+  }
+
+  function formatBytes(bytes: number): string {
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+    return `${Math.max(1, Math.round(bytes / 1024))}KB`;
   }
 
   // --- URL hash sync ---
@@ -267,7 +291,9 @@ import Layout from "../layouts/Layout.astro";
   // --- Facet rendering ---
 
   function renderAllFacets() {
-    const counts = facetCounts(docs, filters);
+    // Facet counts are intersected with the active search query so they
+    // reflect the current result set, not the whole catalog.
+    const counts = facetCounts(docs, filters, searchInput.value.trim(), engine);
 
     // Topics — always open, shows subcategories when a topic is selected
     const topicsList = document.getElementById("facet-topics-list")!;
@@ -288,7 +314,7 @@ import Layout from "../layouts/Layout.astro";
         el.addEventListener("click", () => setFilter("subcategory", el.getAttribute("data-facet")!));
       });
       // Add a "← All topics" back link at top of subcategory list
-      topicsList.innerHTML = `<button class="flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[11px] text-[#6b6b6b] transition-colors hover:text-[#1a1a1a]" id="back-to-topics">← All topics</button>` + topicsList.innerHTML;
+      topicsList.innerHTML = `<button class="flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[11px] text-[#6b6b6b] transition-colors hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]" id="back-to-topics">← All topics</button>` + topicsList.innerHTML;
       document.getElementById("back-to-topics")!.addEventListener("click", () => removeFilter("topic"));
     } else {
       topicsBadge.textContent = `(${counts.topics.length})`;
@@ -300,16 +326,17 @@ import Layout from "../layouts/Layout.astro";
       });
     }
 
-    // Auto-expand accordions with active filters
+    // Only force-open accordions that have an active filter; never force a
+    // user-opened accordion shut on unrelated re-renders (search, pagination).
     const countriesEl = document.getElementById("facet-countries") as HTMLDetailsElement;
     const mediaEl = document.getElementById("facet-media") as HTMLDetailsElement;
     const langEl = document.getElementById("facet-language") as HTMLDetailsElement;
     const actEl = document.getElementById("facet-activity") as HTMLDetailsElement;
 
-    countriesEl.open = filters.country !== "";
-    mediaEl.open = filters.mediaKind !== "";
-    langEl.open = filters.language !== "";
-    actEl.open = filters.activity !== "";
+    if (filters.country) countriesEl.open = true;
+    if (filters.mediaKind) mediaEl.open = true;
+    if (filters.language) langEl.open = true;
+    if (filters.activity) actEl.open = true;
 
     // Countries — show top 15 with "Show all" toggle
     const countriesList = document.getElementById("facet-countries-list")!;
@@ -322,7 +349,7 @@ import Layout from "../layouts/Layout.astro";
       .map(c => facetItem(c.k, c.c, filters.country === c.k, "country"))
       .join("");
     if (hiddenCount > 0) {
-      countriesList.innerHTML += `<button id="show-all-countries" class="mt-1 w-full text-left text-[11px] text-[#6b6b6b] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">Show all ${counts.countries.length} countries&hellip;</button>`;
+      countriesList.innerHTML += `<button id="show-all-countries" class="mt-1 w-full text-left text-[11px] text-[#6b6b6b] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#6b6b6b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]">Show all ${counts.countries.length} countries&hellip;</button>`;
       document.getElementById("show-all-countries")!.addEventListener("click", () => {
         countriesList.innerHTML = counts.countries
           .map(c => facetItem(c.k, c.c, filters.country === c.k, "country"))
@@ -330,6 +357,8 @@ import Layout from "../layouts/Layout.astro";
         countriesList.querySelectorAll("[data-facet]").forEach(el => {
           el.addEventListener("click", () => setFilter("country", el.getAttribute("data-facet")!));
         });
+        // Keep keyboard focus inside the facet list instead of dropping to body
+        countriesList.querySelector<HTMLElement>("[data-facet]")?.focus();
       });
     }
     countriesList.querySelectorAll("[data-facet]").forEach(el => {
@@ -379,10 +408,11 @@ import Layout from "../layouts/Layout.astro";
       <button
         data-facet="${escapeAttr(label)}"
         data-facet-val="${escapeAttr(val)}"
-        class="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-[12px] transition-colors ${activeClass}"
+        aria-pressed="${active ? "true" : "false"}"
+        class="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b] ${activeClass}"
       >
         <span class="truncate">${escapeHtml(label)}</span>
-        <span class="shrink-0 font-mono text-[11px] text-[#8a8a8a]">${count.toLocaleString()}</span>
+        <span class="shrink-0 font-mono text-[11px] text-[#6b6b6b]">${count.toLocaleString()}</span>
       </button>`;
   }
 
@@ -422,27 +452,104 @@ import Layout from "../layouts/Layout.astro";
 
   // --- Apply & render ---
 
-  function applyAndRender() {
-    const query = searchInput.value;
-    const searchResult = searchAndFilter(query, engine, docs, filters);
-    let results = searchResult.docs;
-    matchTerms = searchResult.matchTerms;
+  // Memoized signature of [filters, query] — when unchanged, facet counts are
+  // not recomputed (pagination clicks must not re-scan 43k docs 5 times).
+  let lastFacetKey = "";
 
-    // Sort
-    if (sortOrder === "az") {
-      results = [...results].sort((a, b) => a.t.localeCompare(b.t));
-    } else if (sortOrder === "za") {
-      results = [...results].sort((a, b) => b.t.localeCompare(a.t));
+  function applyAndRender(opts: { pageOnly?: boolean } = {}) {
+    captureFocus();
+
+    if (!opts.pageOnly) {
+      const query = searchInput.value;
+      const searchResult = searchAndFilter(query, engine, docs, filters);
+      let results = searchResult.docs;
+      matchTerms = searchResult.matchTerms;
+
+      // Sort
+      if (sortOrder === "az") {
+        results = [...results].sort((a, b) => a.t.localeCompare(b.t));
+      } else if (sortOrder === "za") {
+        results = [...results].sort((a, b) => b.t.localeCompare(a.t));
+      }
+
+      currentResults = results;
+      renderChips();
+      renderHeading();
+
+      const key = JSON.stringify([filters, searchInput.value.trim()]);
+      if (key !== lastFacetKey) {
+        lastFacetKey = key;
+        renderAllFacets();
+      }
+      searchingEl.classList.add("hidden");
     }
 
-    currentResults = results;
-    const page = paginate(results, currentPage, perPage);
-    renderChips();
-    renderAllFacets();
+    const page = paginate(currentResults, currentPage, perPage);
     renderResults(page.items, page.total);
     renderPagination(page);
-    renderHeading();
     saveFiltersToHash();
+    restoreFocus();
+  }
+
+  // --- Focus management ---
+  // Every interactive control is rebuilt from innerHTML on each render, so a
+  // clicked button is destroyed mid-interaction and focus silently drops to
+  // document.body. Capture what was focused before re-rendering and restore
+  // it to the freshly-built equivalent afterwards.
+
+  let lastFocusKey = "";
+
+  function captureFocus() {
+    const el = document.activeElement as HTMLElement | null;
+    if (!el) return;
+    if (el.hasAttribute("data-facet")) {
+      lastFocusKey = `facet:${el.getAttribute("data-facet-val") ?? el.getAttribute("data-facet")}`;
+    } else if (el.hasAttribute("data-chip-key")) {
+      lastFocusKey = `chip:${el.getAttribute("data-chip-key")}`;
+    } else if (el.hasAttribute("data-chip-clear-search")) {
+      // No id/attr to re-resolve after the chip is removed — any unresolvable
+      // key falls back to the results region instead of document.body.
+      lastFocusKey = "id:chip-clear-search";
+    } else if (el.hasAttribute("data-page")) {
+      lastFocusKey = `page:${el.getAttribute("data-page")}`;
+    } else if (el.id) {
+      lastFocusKey = `id:${el.id}`;
+    } else {
+      lastFocusKey = "";
+    }
+  }
+
+  function restoreFocus() {
+    if (!lastFocusKey) return;
+    const colon = lastFocusKey.indexOf(":");
+    const kind = lastFocusKey.slice(0, colon);
+    const val = lastFocusKey.slice(colon + 1);
+    let el: HTMLElement | null = null;
+    if (kind === "facet") {
+      const els = document.querySelectorAll<HTMLElement>("[data-facet-val]");
+      for (const candidate of els) {
+        if (candidate.getAttribute("data-facet-val") === val) { el = candidate; break; }
+      }
+    } else if (kind === "chip") {
+      const els = document.querySelectorAll<HTMLElement>("[data-chip-key]");
+      for (const candidate of els) {
+        if (candidate.getAttribute("data-chip-key") === val) { el = candidate; break; }
+      }
+    } else if (kind === "page") {
+      const els = document.querySelectorAll<HTMLElement>("[data-page]");
+      for (const candidate of els) {
+        if (candidate.getAttribute("data-page") === val) { el = candidate; break; }
+      }
+    } else if (kind === "id") {
+      el = document.getElementById(val);
+    }
+    if (el) {
+      el.focus({ preventScroll: true });
+    } else {
+      // The control no longer exists (e.g. removed filter chip) — move focus
+      // to the results region so keyboard users are not thrown to the top.
+      resultsListEl.focus({ preventScroll: true });
+    }
   }
 
   // --- Chips ---
@@ -466,16 +573,16 @@ import Layout from "../layouts/Layout.astro";
 
     let html = "";
     if (searchInput.value.trim()) {
-      html += `<span class="inline-flex items-center gap-1 rounded-full border border-[#d4d0c8] bg-[#f5f3ef] px-2.5 py-1 text-[12px] text-[#1a1a1a]">Search: ${escapeHtml(searchInput.value.trim())}<button data-chip-clear-search class="inline-flex items-center text-[#8a8a8a] hover:text-[#1a1a1a]" aria-label="Clear search">&times;</button></span>`;
+      html += `<span class="inline-flex items-center gap-1 rounded-full border border-[#d4d0c8] bg-[#f5f3ef] px-2.5 py-1 text-[12px] text-[#1a1a1a]">Search: ${escapeHtml(searchInput.value.trim())}<button data-chip-clear-search class="inline-flex items-center text-[#6b6b6b] hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]" aria-label="Clear search">&times;</button></span>`;
     }
     for (const c of chips) {
       html += `
         <span class="inline-flex items-center gap-1 rounded-full border border-[#d4d0c8] bg-[#f5f3ef] px-2.5 py-1 text-[12px] text-[#1a1a1a]">
           ${escapeHtml(c.label)}
-          <button data-chip-key="${c.key}" class="inline-flex items-center text-[#8a8a8a] hover:text-[#1a1a1a]" aria-label="Remove ${escapeAttr(c.label)} filter">&times;</button>
+          <button data-chip-key="${c.key}" class="inline-flex items-center text-[#6b6b6b] hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]" aria-label="Remove ${escapeAttr(c.label)} filter">&times;</button>
         </span>`;
     }
-    html += `<button id="clear-all-filters" class="text-[12px] text-[#6b6b6b] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">Clear all</button>`;
+    html += `<button id="clear-all-filters" class="text-[12px] text-[#6b6b6b] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#6b6b6b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]">Clear all</button>`;
 
     chipsEl.innerHTML = html;
 
@@ -496,7 +603,7 @@ import Layout from "../layouts/Layout.astro";
     if (items.length === 0) {
       const hasFilters = filters.topic || filters.subcategory || filters.country || filters.mediaKind || filters.language || filters.activity || searchInput.value.trim();
       const suggestions = hasFilters
-        ? `<p class="mt-3 text-[13px] text-[#8a8a8a]">Suggestions: <button class="underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]" id="clear-suggest">Clear all filters</button> or try a different search term.</p>`
+        ? `<p class="mt-3 text-[13px] text-[#6b6b6b]">Suggestions: <button class="underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#6b6b6b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]" id="clear-suggest">Clear all filters</button> or try a different search term.</p>`
         : "";
       resultsListEl.innerHTML = `
         <div class="py-12 text-center">
@@ -531,44 +638,43 @@ import Layout from "../layouts/Layout.astro";
     const description = doc.d.trim();
     const hasDesc = description.length > 0;
     const descHighlighted = hasDesc ? highlightMatches(description, terms) : "";
-    const truncated = hasDesc
-      ? (description.length > 140
-          ? highlightMatches(description.substring(0, 140), terms) + "…"
-          : descHighlighted)
-      : "";
+    const mediaLabel = doc.m === "audio" ? "Audio" : doc.m === "video" ? "Video" : "Text";
 
-    // Color-coded left border by media type
-    const borderColor = doc.m === "audio" ? "border-l-blue-400" : doc.m === "video" ? "border-l-red-400" : "border-l-amber-400";
-    const borderClass = `border-l-2 ${borderColor}`;
+    // Desaturated warm tint strip by media type (part of the warm palette,
+    // not stock Tailwind 400 hues). Rendered as an absolutely positioned
+    // element so the hover border never erases it.
+    const stripColor = doc.m === "audio" ? "bg-[#a8b8c9]" : doc.m === "video" ? "bg-[#c9a3a3]" : "bg-[#d4c5a3]";
 
     return `
-      <div class="group relative rounded-lg border border-[#e8e4dd] ${borderClass} bg-white p-3 transition-colors hover:border-[#c4bfb4] hover:shadow-sm">
+      <div class="group relative overflow-hidden rounded-lg border border-[#e8e4dd] bg-white p-3.5 transition-colors hover:border-[#c4bfb4] hover:shadow-sm">
+        <span aria-hidden="true" class="absolute left-0 top-0 h-full w-[3px] ${stripColor}"></span>
         <a href="/feed?sourceId=${escapeAttr(doc.s)}" class="block">
-          <div class="flex items-start gap-3">
-            <span class="mt-0.5 shrink-0 text-[#8a8a8a] group-hover:text-[#6b6b6b] transition-colors">
+          <div class="flex items-start gap-3 pr-7">
+            <span class="mt-0.5 shrink-0 text-[#6b6b6b] group-hover:text-[#1a1a1a] transition-colors">
+              <span class="sr-only">${mediaLabel}</span>
               ${mediaBadge(doc.m)}
             </span>
             <div class="min-w-0 flex-1">
-              <span class="block text-[14px] font-medium leading-snug text-[#1a1a1a]">${title}</span>
+              <span class="block truncate text-[15px] font-semibold leading-snug text-[#1a1a1a]" title="${escapeAttr(doc.t)}">${title}</span>
               <span class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-[#6b6b6b]">
-                <span class="font-mono text-[10px] uppercase tracking-wider text-[#8a8a8a]">${escapeHtml(doc.l)}</span>
+                <span class="font-mono text-[10px] uppercase tracking-wider text-[#6b6b6b]">${escapeHtml(doc.l)}</span>
                 <span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span>
                 ${escapeHtml(doc.sc || doc.tp)}
                 ${(doc as any)._co ? `<span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span> ${escapeHtml((doc as any)._co)}` : ""}
                 <span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span>
                 ${escapeHtml(activityLabel(doc.a))}
               </span>
-              ${hasDesc ? `<span class="mt-1 block text-[13px] leading-relaxed text-[#5c5c5c]">${truncated}</span>` : ""}
+              ${hasDesc ? `<span class="mt-1 block text-[13px] leading-relaxed text-[#5c5c5c] line-clamp-2">${descHighlighted}</span>` : ""}
             </div>
           </div>
         </a>
         <button
           data-copy-link="${escapeAttr(doc.s)}"
-          class="absolute right-2 top-2 hidden rounded p-1 text-[#8a8a8a] opacity-0 transition-all hover:bg-[#f5f3ef] hover:text-[#1a1a1a] group-hover:opacity-100 sm:inline-flex"
+          class="absolute right-2 top-2 inline-flex rounded p-1 text-[#6b6b6b] transition-colors hover:bg-[#f5f3ef] hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]"
           aria-label="Copy link to ${escapeAttr(doc.t)}"
           title="Copy link"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
       </div>`;
   }
@@ -595,7 +701,7 @@ import Layout from "../layouts/Layout.astro";
       if (p === 1 || p === page.pages || (p >= page.page - 2 && p <= page.page + 2)) {
         html += pageNumber(p, p === page.page);
       } else if (p === page.page - 3 || p === page.page + 3) {
-        html += `<span class="px-1 text-[#8a8a8a]">…</span>`;
+        html += `<span class="px-1 text-[#6b6b6b]">…</span>`;
       }
     }
     html += pageButton(page.page < page.pages, page.page + 1, "Next →");
@@ -607,7 +713,9 @@ import Layout from "../layouts/Layout.astro";
       el.querySelectorAll<HTMLButtonElement>("[data-page]").forEach((btn) => {
         btn.addEventListener("click", () => {
           currentPage = parseInt(btn.getAttribute("data-page")!, 10);
-          applyAndRender();
+          // pageOnly: neither the search nor the facets could have changed —
+          // skip the 43k-doc re-scan and full facet rebuild.
+          applyAndRender({ pageOnly: true });
           resultsListEl.scrollIntoView({ behavior: "smooth", block: "start" });
         });
       });
@@ -618,12 +726,12 @@ import Layout from "../layouts/Layout.astro";
 
   function pageButton(enabled: boolean, pg: number, label: string): string {
     if (!enabled) return `<span class="px-2 py-1 text-[#c4bfb4]">${label}</span>`;
-    return `<button data-page="${pg}" class="rounded px-2 py-1 text-[#6b6b6b] transition-colors hover:bg-[#f5f3ef] hover:text-[#1a1a1a]">${label}</button>`;
+    return `<button data-page="${pg}" class="rounded px-2 py-1 text-[#6b6b6b] transition-colors hover:bg-[#f5f3ef] hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]">${label}</button>`;
   }
 
   function pageNumber(p: number, current: boolean): string {
-    if (current) return `<span class="rounded bg-[#f0ede7] px-2 py-1 font-medium text-[#1a1a1a]">${p}</span>`;
-    return `<button data-page="${p}" class="rounded px-2 py-1 text-[#6b6b6b] transition-colors hover:bg-[#f5f3ef] hover:text-[#1a1a1a]">${p}</button>`;
+    if (current) return `<span aria-current="page" class="rounded bg-[#f0ede7] px-2 py-1 font-medium text-[#1a1a1a]">${p}</span>`;
+    return `<button data-page="${p}" class="rounded px-2 py-1 text-[#6b6b6b] transition-colors hover:bg-[#f5f3ef] hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b6b6b]">${p}</button>`;
   }
 
   function renderHeading() {
@@ -631,11 +739,14 @@ import Layout from "../layouts/Layout.astro";
     if (query) {
       headingEl.innerHTML = `Results for &ldquo;${escapeHtml(query)}&rdquo;`;
       headingEl.classList.remove("hidden");
+      leadEl.classList.add("hidden");
     } else if (!filters.topic && !filters.country && !filters.mediaKind && !filters.language && !filters.activity) {
       headingEl.textContent = "Catalog";
       headingEl.classList.remove("hidden");
+      leadEl.classList.remove("hidden");
     } else {
       headingEl.classList.add("hidden");
+      leadEl.classList.add("hidden");
     }
   }
 
@@ -657,7 +768,7 @@ import Layout from "../layouts/Layout.astro";
   }
 
   function mediaBadge(m: string): string {
-    const common = 'xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+    const common = 'xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
     if (m === "audio") return `<svg ${common}><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>`;
     if (m === "video") return `<svg ${common}><polygon points="6 3 20 12 6 21 6 3"/></svg>`;
     return `<svg ${common}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`;
@@ -670,7 +781,13 @@ import Layout from "../layouts/Layout.astro";
     sidebarToggle.setAttribute("aria-expanded", String(!isHidden));
   });
 
-  searchInput.addEventListener("input", debounce(() => { currentPage = 1; applyAndRender(); }, 200));
+  // Show a lightweight "Searching…" status during the debounce window so
+  // heavy re-renders never look like a frozen UI with zero feedback.
+  const debouncedSearch = debounce(() => { currentPage = 1; applyAndRender(); }, 200);
+  searchInput.addEventListener("input", () => {
+    searchingEl.classList.remove("hidden");
+    debouncedSearch();
+  });
 
   sortSelect.addEventListener("change", () => {
     sortOrder = sortSelect.value;

@@ -46,11 +46,20 @@ export interface DocEntry {
   _co?: string; // country name — enriched client-side from buildDocCountryMap
 }
 
-export async function fetchCatalogIndex(): Promise<CatalogIndex> {
+/**
+ * Fetches the full catalog index. `onSize` fires as soon as the response
+ * headers arrive, with the payload size in bytes (Content-Length) or null
+ * if the server did not report it — used to show download size during load.
+ */
+export async function fetchCatalogIndex(
+  onSize?: (bytes: number | null) => void,
+): Promise<CatalogIndex> {
   const response = await fetch(CATALOG_INDEX_URL);
   if (!response.ok) {
     throw new Error(`Failed to fetch catalog index: ${response.status}`);
   }
+  const length = response.headers.get("Content-Length");
+  onSize?.(length ? parseInt(length, 10) : null);
   return response.json() as Promise<CatalogIndex>;
 }
 
@@ -68,23 +77,46 @@ export interface IndexedDoc {
   sc: string;
 }
 
-export function createSearchEngine(docs: DocEntry[]): MiniSearch<IndexedDoc> {
+/**
+ * Builds the search engine over all docs. Indexing 43k+ docs is done in
+ * chunks with `await` yield points between them so the loading UI keeps
+ * animating instead of blocking the main thread for seconds.
+ *
+ * `onProgress(done, total)` fires after each chunk. `_co` (country name)
+ * must be set on the docs before calling this so country names are
+ * searchable (facet values are indexed: country, language, activity, media).
+ */
+export async function createSearchEngine(
+  docs: DocEntry[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<MiniSearch<IndexedDoc>> {
   const indexedDocs: IndexedDoc[] = docs.map((doc, i) => ({
     id: i,
     ...doc,
   }));
 
   const miniSearch = new MiniSearch<IndexedDoc>({
-    fields: ["t", "d", "kw", "tp", "sc"],
+    // Facet values are searchable too, so "portugal", "video", or "en"
+    // match what the facets show.
+    fields: ["t", "d", "kw", "tp", "sc", "_co", "l", "a", "m"],
     storeFields: ["t", "d", "s", "l", "m", "n", "a", "tp", "sc"],
     searchOptions: {
-      boost: { t: 3, kw: 2, tp: 1.5, sc: 1.5, d: 1 },
+      boost: { t: 3, kw: 2, tp: 1.5, sc: 1.5, d: 1, _co: 1.5, l: 1, a: 1, m: 1 },
       prefix: true,
       fuzzy: 0.2,
     },
   });
 
-  miniSearch.addAll(indexedDocs);
+  const CHUNK_SIZE = 4000;
+  for (let i = 0; i < indexedDocs.length; i += CHUNK_SIZE) {
+    miniSearch.addAll(indexedDocs.slice(i, i + CHUNK_SIZE));
+    const done = Math.min(i + CHUNK_SIZE, indexedDocs.length);
+    onProgress?.(done, indexedDocs.length);
+    if (done < indexedDocs.length) {
+      // Yield to the event loop so the loading spinner keeps animating.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
   return miniSearch;
 }
 
@@ -213,10 +245,16 @@ export function paginate(
 /**
  * Count how many docs match each facet value given the CURRENT filters
  * (excluding the facet being counted, so counts reflect what happens if you add that filter).
+ *
+ * When `query` is non-empty and `engine` is provided, every facet count is
+ * intersected with the search result set, so facet counts reflect the docs
+ * the user is currently searching, not the whole catalog.
  */
 export function facetCounts(
   docs: DocEntry[],
   filters: FilterState,
+  query = "",
+  engine?: MiniSearch<IndexedDoc>,
 ): {
   topics: Array<{ k: string; c: number }>;
   countries: Array<{ k: string; c: number }>;
@@ -224,6 +262,14 @@ export function facetCounts(
   languages: Array<{ k: string; c: number }>;
   activities: Array<{ k: string; c: number; label: string }>;
 } {
+  // Doc indices matching the active search query (unfiltered). Null = no query.
+  let matchedSet: Set<number> | null = null;
+  if (query.trim() && engine) {
+    matchedSet = new Set(engine.search(query.trim()).map((r) => r.id as number));
+  }
+  const inScope = (doc: DocEntry): boolean =>
+    !matchedSet || matchedSet.has((doc as any)._idx as number);
+
   const baseFilters = { ...filters };
 
   // Topics
@@ -231,6 +277,7 @@ export function facetCounts(
   baseFilters.subcategory = "";
   const topicCounts = new Map<string, number>();
   for (const doc of applyFilters(docs, baseFilters)) {
+    if (!inScope(doc)) continue;
     topicCounts.set(doc.tp, (topicCounts.get(doc.tp) ?? 0) + 1);
   }
   const topics = [...topicCounts.entries()]
@@ -243,12 +290,14 @@ export function facetCounts(
   baseFilters.country = "";
   const countryCounts = new Map<string, number>();
   for (const doc of applyFilters(docs, baseFilters)) {
+    if (!inScope(doc)) continue;
     if (doc._co) countryCounts.set(doc._co, (countryCounts.get(doc._co) ?? 0) + 1);
   }
+  // No hard cap here: the UI slices to 15 for display and expands to the full
+  // list on "Show all", so truncating would mislabel the total.
   const countries = [...countryCounts.entries()]
     .filter(([, c]) => c > 0)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 50)
     .map(([k, c]) => ({ k, c }));
 
   // Media kinds
@@ -257,6 +306,7 @@ export function facetCounts(
   const mediaKindLabels: Record<string, string> = { text: "Text", audio: "Audio", video: "Video" };
   const mediaCounts = new Map<string, number>();
   for (const doc of applyFilters(docs, baseFilters)) {
+    if (!inScope(doc)) continue;
     mediaCounts.set(doc.m, (mediaCounts.get(doc.m) ?? 0) + 1);
   }
   const mediaKinds = [...mediaCounts.entries()]
@@ -269,6 +319,7 @@ export function facetCounts(
   baseFilters.language = "";
   const langCounts = new Map<string, number>();
   for (const doc of applyFilters(docs, baseFilters)) {
+    if (!inScope(doc)) continue;
     const lang = doc.l.trim().toUpperCase();
     if (!lang) continue;
     langCounts.set(lang, (langCounts.get(lang) ?? 0) + 1);
@@ -288,6 +339,7 @@ export function facetCounts(
   };
   const activityCounts = new Map<string, number>();
   for (const doc of applyFilters(docs, baseFilters)) {
+    if (!inScope(doc)) continue;
     activityCounts.set(doc.a, (activityCounts.get(doc.a) ?? 0) + 1);
   }
   const activities = [...activityCounts.entries()]
