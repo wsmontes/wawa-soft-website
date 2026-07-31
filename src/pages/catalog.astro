@@ -508,6 +508,7 @@ import Layout from "../layouts/Layout.astro";
               <span class="font-mono text-[11px] uppercase text-[#8a8a8a]">${escapeHtml(doc.l)}</span>
               <span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span>
               ${escapeHtml(doc.sc || doc.tp)}
+              ${(doc as any)._co ? `<span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span> ${escapeHtml((doc as any)._co)}` : ""}
               <span aria-hidden="true" class="text-[#d4d0c8]">&middot;</span>
               ${escapeHtml(activityLabel(doc.a))}
             </span>
