@@ -43,6 +43,7 @@ export interface DocEntry {
   a: string;
   tp: string;
   sc: string;
+  _co?: string; // country name — enriched client-side from buildDocCountryMap
 }
 
 export async function fetchCatalogIndex(): Promise<CatalogIndex> {
@@ -101,10 +102,20 @@ export function emptyFilters(): FilterState {
   return { topic: "", subcategory: "", country: "", mediaKind: "", language: "", activity: "" };
 }
 
+/** Build a map from doc array index → country name using the CountryNode data. */
+export function buildDocCountryMap(countries: CountryNode[]): Map<number, string> {
+  const map = new Map<number, string>();
+  for (const country of countries) {
+    for (const idx of country.docs) {
+      map.set(idx, country.k);
+    }
+  }
+  return map;
+}
+
 /**
  * Apply all active filters to the full doc array.
- * When a topic is selected without a subcategory, matches ALL subcategories within that topic.
- * When a subcategory is selected, the topic filter is implied.
+ * docCountryMap: doc index → country name for country filtering.
  */
 export function applyFilters(
   docs: DocEntry[],
@@ -113,7 +124,7 @@ export function applyFilters(
   return docs.filter((doc) => {
     if (filters.topic && doc.tp !== filters.topic) return false;
     if (filters.subcategory && doc.sc !== filters.subcategory) return false;
-    if (filters.country && doc.l !== filters.country && doc.tp !== filters.country) return false;
+    if (filters.country && doc._co !== filters.country) return false;
     if (filters.mediaKind && doc.m !== filters.mediaKind) return false;
     if (filters.language && doc.l.toUpperCase() !== filters.language.toUpperCase()) return false;
     if (filters.activity && doc.a !== filters.activity) return false;
@@ -142,7 +153,7 @@ export function searchAndFilter(
     if (!matchedIds.has(i)) return false;
     if (filters.topic && doc.tp !== filters.topic) return false;
     if (filters.subcategory && doc.sc !== filters.subcategory) return false;
-    if (filters.country && doc.l !== filters.country && doc.tp !== filters.country) return false;
+    if (filters.country && doc._co !== filters.country) return false;
     if (filters.mediaKind && doc.m !== filters.mediaKind) return false;
     if (filters.language && doc.l.toUpperCase() !== filters.language.toUpperCase()) return false;
     if (filters.activity && doc.a !== filters.activity) return false;
@@ -181,7 +192,6 @@ export function facetCounts(
   languages: Array<{ k: string; c: number }>;
   activities: Array<{ k: string; c: number; label: string }>;
 } {
-  // Base: apply all filters EXCEPT the dimension being counted
   const baseFilters = { ...filters };
 
   // Topics
@@ -195,15 +205,13 @@ export function facetCounts(
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([k, c]) => ({ k, c }));
 
-  // Countries
+  // Countries — uses _co field (enriched client-side from CountryNode data)
   baseFilters.topic = filters.topic;
   baseFilters.subcategory = filters.subcategory;
   baseFilters.country = "";
   const countryCounts = new Map<string, number>();
   for (const doc of applyFilters(docs, baseFilters)) {
-    // Use language as a proxy for country — the index doesn't have a country field per doc.
-    // Country filtering uses language matching currently.
-    countryCounts.set(doc.l, (countryCounts.get(doc.l) ?? 0) + 1);
+    if (doc._co) countryCounts.set(doc._co, (countryCounts.get(doc._co) ?? 0) + 1);
   }
   const countries = [...countryCounts.entries()]
     .filter(([, c]) => c > 0)

@@ -104,6 +104,7 @@ import Layout from "../layouts/Layout.astro";
   import {
     fetchCatalogIndex,
     createSearchEngine,
+    buildDocCountryMap,
     applyFilters,
     searchAndFilter,
     paginate,
@@ -117,6 +118,7 @@ import Layout from "../layouts/Layout.astro";
   // --- State ---
   let engine: MiniSearch<any>;
   let docs: DocEntry[];
+  let docCountryMap: Map<number, string>;
   let indexData: import("../lib/catalog-index").CatalogIndex;
   let filters: FilterState = emptyFilters();
   let currentPage = 1;
@@ -145,6 +147,11 @@ import Layout from "../layouts/Layout.astro";
       loadingTextEl.textContent = "Loading catalog...";
       indexData = await fetchCatalogIndex();
       docs = indexData.docs;
+      docCountryMap = buildDocCountryMap(indexData.countries);
+      // Enrich docs with country field for filtering
+      for (let i = 0; i < docs.length; i++) {
+        (docs[i] as any)._co = docCountryMap.get(i) ?? "";
+      }
       engine = createSearchEngine(docs);
       renderAllFacets();
       applyAndRender();
