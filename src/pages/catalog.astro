@@ -134,6 +134,7 @@ import Layout from "../layouts/Layout.astro";
   let currentBreadcrumb = "";
   let currentTopic: TreeNode | null = null;
   let currentContext = ""; // subcategory or country label for the count footer
+  let currentSegments: Array<{ label: string; action?: () => void }> = [];
 
   // --- DOM refs ---
   const loadingEl = document.getElementById("catalog-loading")!;
@@ -223,8 +224,9 @@ import Layout from "../layouts/Layout.astro";
     currentTopic = topic;
     currentView = "topic";
     currentIndices = topic.sub.flatMap((sub) => sub.docs);
-    currentContext = "";
-    renderSubcategories(topic);
+    currentContext = topic.k;
+    breadcrumb([{ label: "Catalog", action: restoreBrowseView }, { label: topic.k }]);
+    renderFeedCards(currentIndices, getFilters(), topic.k);
   }
 
   function renderCountryNav(countries: CountryNode[]) {
@@ -397,11 +399,9 @@ import Layout from "../layouts/Layout.astro";
 
   function handleFilterChange() {
     if (currentView === "search") {
-      handleSearch(); // re-run search with new filters
-    } else if (currentView === "subcategory" || currentView === "country") {
+      handleSearch();
+    } else if (currentView === "topic" || currentView === "subcategory" || currentView === "country") {
       renderFeedCards(currentIndices, getFilters(), currentContext);
-    } else if (currentView === "topic" && currentTopic) {
-      renderSubcategories(currentTopic);
     }
   }
 
@@ -431,8 +431,9 @@ import Layout from "../layouts/Layout.astro";
 
   const breadcrumbEl = document.getElementById("catalog-breadcrumb")!;
 
-  /** breadcrumb segments: [{label}] — last segment is plain text, earlier ones are clickable links */
+  /** Renders clickable breadcrumb segments. Uses event delegation on the nav. */
   function breadcrumb(segments: Array<{ label: string; action?: () => void }>) {
+    currentSegments = segments;
     currentBreadcrumb = segments.map((s) => s.label).join(" > ");
     breadcrumbEl.innerHTML = segments
       .map((seg, i) => {
@@ -440,19 +441,20 @@ import Layout from "../layouts/Layout.astro";
         if (isLast || !seg.action) {
           return `<span class="text-[#1a1a1a]">${escapeHtml(seg.label)}</span>`;
         }
-        return `<a href="#" class="underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]" data-bc-action="${i}">${escapeHtml(seg.label)}</a>`;
+        return `<a href="#" data-bc="${i}" class="underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">${escapeHtml(seg.label)}</a>`;
       })
       .join(` <span aria-hidden="true" class="text-[#d4d0c8]">&gt;</span> `);
-    // Wire click handlers for the link segments
-    breadcrumbEl.querySelectorAll<HTMLAnchorElement>("[data-bc-action]").forEach((link) => {
-      const idx = parseInt(link.dataset.bcAction ?? "", 10);
-      link.addEventListener("click", (e) => {
-        e.preventDefault();
-        const seg = segments[idx];
-        if (seg?.action) seg.action();
-      });
-    });
   }
+
+  // Single delegated click handler — never needs re-binding
+  breadcrumbEl.addEventListener("click", (e) => {
+    const link = (e.target as HTMLElement).closest<HTMLAnchorElement>("[data-bc]");
+    if (!link) return;
+    e.preventDefault();
+    const idx = parseInt(link.getAttribute("data-bc") ?? "", 10);
+    if (isNaN(idx)) return;
+    currentSegments[idx]?.action?.();
+  });
 
   // --- Utils ---
 
