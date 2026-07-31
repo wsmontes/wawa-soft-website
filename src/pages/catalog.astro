@@ -177,14 +177,20 @@ import Layout from "../layouts/Layout.astro";
       const start = Date.now();
       const ticker = setInterval(() => {
         const elapsed = Math.floor((Date.now() - start) / 1000);
-        loadingTextEl.textContent = `Loading 43,000+ sources… (${elapsed}s)`;
+        loadingTextEl.textContent = `Loading catalog… (${elapsed}s)`;
       }, 500);
+
+      // Fetch manifest in parallel for instant stats
+      import("../lib/feed-catalog").then(m => m.fetchCatalogManifest().then(mani => {
+        loadingTextEl.textContent = `Loading ${mani.sourceCount.toLocaleString()} sources across ${mani.fileCount} files…`;
+      }).catch(()=>{})).catch(()=>{});
 
       indexData = await fetchCatalogIndex();
 
       clearInterval(ticker);
       const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-      loadingTextEl.textContent = `Loaded ${indexData.stats.sources.toLocaleString()} sources · ${indexData.stats.topics} topics · ${indexData.stats.countries} countries (${elapsed}s)`;
+      const statsMsg = `${indexData.stats.sources.toLocaleString()} sources · ${indexData.stats.topics} topics · ${indexData.stats.countries} countries`;
+      loadingTextEl.textContent = `Ready — ${statsMsg} (${elapsed}s)`;
 
       docs = indexData.docs;
       docCountryMap = buildDocCountryMap(indexData.countries);
