@@ -14,7 +14,11 @@ import Layout from "../layouts/Layout.astro";
     <div id="catalog-loading" class="mt-6">
       <div class="animate-pulse space-y-3">
         <div class="h-10 w-full rounded-lg bg-[#e8e4dd]"></div>
-        <div class="h-5 w-72 rounded bg-[#e8e4dd]"></div>
+        <div class="flex gap-2">
+          <div class="h-8 w-28 rounded bg-[#e8e4dd]"></div>
+          <div class="h-8 w-20 rounded bg-[#e8e4dd]"></div>
+        </div>
+        <div class="h-64 w-full rounded-lg bg-[#e8e4dd]"></div>
       </div>
       <p class="mt-4 text-[14px] text-[#8a8a8a]" id="catalog-loading-text">Loading catalog&hellip;</p>
     </div>
@@ -170,8 +174,18 @@ import Layout from "../layouts/Layout.astro";
   // --- Init ---
   async function init() {
     try {
-      loadingTextEl.textContent = "Loading 43,000+ sources…";
+      const start = Date.now();
+      const ticker = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - start) / 1000);
+        loadingTextEl.textContent = `Loading 43,000+ sources… (${elapsed}s)`;
+      }, 500);
+
       indexData = await fetchCatalogIndex();
+
+      clearInterval(ticker);
+      const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+      loadingTextEl.textContent = `Loaded ${indexData.stats.sources.toLocaleString()} sources · ${indexData.stats.topics} topics · ${indexData.stats.countries} countries (${elapsed}s)`;
+
       docs = indexData.docs;
       docCountryMap = buildDocCountryMap(indexData.countries);
       for (let i = 0; i < docs.length; i++) {
@@ -184,7 +198,7 @@ import Layout from "../layouts/Layout.astro";
 
       renderAllFacets();
       applyAndRender();
-      showMain();
+      hideLoading();
     } catch (err) {
       console.error("Could not load the catalog:", err);
       loadingEl.classList.add("hidden");
@@ -192,7 +206,7 @@ import Layout from "../layouts/Layout.astro";
     }
   }
 
-  function showMain() {
+  function hideLoading() {
     loadingEl.classList.add("hidden");
     errorEl.classList.add("hidden");
     mainEl.classList.remove("hidden");
@@ -246,20 +260,29 @@ import Layout from "../layouts/Layout.astro";
   function renderAllFacets() {
     const counts = facetCounts(docs, filters);
 
-    // Topics
+    // Topics — always open, shows subcategories when a topic is selected
     const topicsList = document.getElementById("facet-topics-list")!;
     const topicsBadge = document.getElementById("facet-topics-badge")!;
+    const topicEl = document.getElementById("facet-topics") as HTMLDetailsElement;
     const topic = indexData.tree.find(t => t.k === filters.topic);
+
     if (filters.topic && topic) {
-      topicsBadge.textContent = filters.subcategory ? "" : `(${counts.topics.find(t => t.k === filters.topic)?.c ?? 0})`;
+      topicEl.open = true;
+      topicsBadge.textContent = filters.subcategory ? `(1 selected)` : `(${counts.topics.find(t => t.k === filters.topic)?.c ?? 0} in topic)`;
       topicsList.innerHTML = topic.sub
-        .map(sub => facetItem(sub.k, sub.c, filters.subcategory === sub.k, "subcategory"))
+        .map(sub => {
+          const subCount = counts.topics.find(t => t.k === filters.topic);
+          return facetItem(sub.k, sub.c, filters.subcategory === sub.k, "subcategory");
+        })
         .join("");
       topicsList.querySelectorAll("[data-facet]").forEach(el => {
         el.addEventListener("click", () => setFilter("subcategory", el.getAttribute("data-facet")!));
       });
+      // Add a "← All topics" back link at top of subcategory list
+      topicsList.innerHTML = `<button class="flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[11px] text-[#6b6b6b] transition-colors hover:text-[#1a1a1a]" id="back-to-topics">← All topics</button>` + topicsList.innerHTML;
+      document.getElementById("back-to-topics")!.addEventListener("click", () => removeFilter("topic"));
     } else {
-      topicsBadge.textContent = filters.topic ? "" : `(${counts.topics.length})`;
+      topicsBadge.textContent = `(${counts.topics.length})`;
       topicsList.innerHTML = counts.topics
         .map(t => facetItem(t.k, t.c, filters.topic === t.k, "topic"))
         .join("");
@@ -267,6 +290,17 @@ import Layout from "../layouts/Layout.astro";
         el.addEventListener("click", () => setFilter("topic", el.getAttribute("data-facet")!));
       });
     }
+
+    // Auto-expand accordions with active filters
+    const countriesEl = document.getElementById("facet-countries") as HTMLDetailsElement;
+    const mediaEl = document.getElementById("facet-media") as HTMLDetailsElement;
+    const langEl = document.getElementById("facet-language") as HTMLDetailsElement;
+    const actEl = document.getElementById("facet-activity") as HTMLDetailsElement;
+
+    countriesEl.open = filters.country !== "";
+    mediaEl.open = filters.mediaKind !== "";
+    langEl.open = filters.language !== "";
+    actEl.open = filters.activity !== "";
 
     // Countries
     const countriesList = document.getElementById("facet-countries-list")!;
