@@ -4,7 +4,7 @@
 
 **Goal:** Add a `/catalog` page that lets users browse, search, and filter all 43,583 FeedMine feeds through a hierarchical directory inspired by the old Netscape directory concept.
 
-**Architecture:** A Python script in feed-repository builds a single `catalogo/catalog-index.json` from all OPML files — a tree of topics→subcategories, a flat country list, and a docs array with short-key entries. The Astro page at `/catalog` fetches this file once, parses the tree for sidebar navigation, and indexes docs into MiniSearch for instant full-text search. All navigation, search, and filtering is client-side.
+**Architecture:** A Python script in feed-repository builds a single `catalog/catalog-index.json` from all OPML files — a tree of topics→subcategories, a flat country list, and a docs array with short-key entries. The Astro page at `/catalog` fetches this file once, parses the tree for sidebar navigation, and indexes docs into MiniSearch for instant full-text search. All navigation, search, and filtering is client-side.
 
 **Tech Stack:** Python 3 (index generation), Astro 6.x + Tailwind CSS 4 (page), MiniSearch (client-side search), GitHub Pages (static hosting).
 
@@ -24,7 +24,7 @@
 **Files:**
 - Create: `scripts/build_catalog_index.py`
 
-**Goal:** Python script that processes all OPML files and generates `catalogo/catalog-index.json` with tree, countries, docs, and stats.
+**Goal:** Python script that processes all OPML files and generates `catalog/catalog-index.json` with tree, countries, docs, and stats.
 
 - [ ] **Step 1: Create `scripts/build_catalog_index.py`**
 
@@ -35,7 +35,7 @@ The script follows the same conventions as `scripts/build_feed_index.py` (same R
 """Build a single catalog index JSON from OPML files for the
 FeedMine Catalog Browser (/catalog page on wawasoft.net).
 
-Generates catalogo/catalog-index.json with:
+Generates catalog/catalog-index.json with:
 - tree: topics → subcategories with feed counts and doc indices
 - countries: flat list of countries with feed counts and doc indices
 - docs: flat array of compact feed entries (short keys)
@@ -51,7 +51,7 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CATALOG_DIR = ROOT / "catalogo"
+CATALOG_DIR = ROOT / "catalog"
 
 # ---------------------------------------------------------------------------
 # Short-key doc entry — maps 1:1 from OPML attributes (see spec)
@@ -204,7 +204,7 @@ python3 scripts/build_catalog_index.py
 
 Expected output:
 ```
-Catalog index: 43,583 feeds, 17 topics, 94 countries → catalogo/catalog-index.json (X.X MB)
+Catalog index: 43,583 feeds, 17 topics, 94 countries → catalog/catalog-index.json (X.X MB)
 ```
 
 - [ ] **Step 3: Verify JSON structure**
@@ -212,7 +212,7 @@ Catalog index: 43,583 feeds, 17 topics, 94 countries → catalogo/catalog-index.
 ```bash
 python3 -c "
 import json
-with open('catalogo/catalog-index.json') as f:
+with open('catalog/catalog-index.json') as f:
     data = json.load(f)
 print('Keys:', list(data.keys()))
 print('Stats:', data['stats'])
@@ -232,7 +232,7 @@ print(f'Max doc index in first subcat: {max_idx} (valid: {max_idx < len(data[\"d
 - [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/build_catalog_index.py catalogo/
+git add scripts/build_catalog_index.py catalog/
 git commit -m "feat: add catalog index generator and initial index"
 ```
 
@@ -251,12 +251,12 @@ Add after the existing `python3 scripts/build_feed_index.py` line:
       - run: python3 scripts/build_catalog_index.py
 ```
 
-- [ ] **Step 2: Ensure `catalogo/` is included in the commit step**
+- [ ] **Step 2: Ensure `catalog/` is included in the commit step**
 
-The existing `git add index/` should also include `catalogo/`. Update the `git add` line:
+The existing `git add index/` should also include `catalog/`. Update the `git add` line:
 
 ```yaml
-          git add index/ catalogo/
+          git add index/ catalog/
 ```
 
 - [ ] **Step 3: Verify the workflow YAML is valid**
@@ -305,7 +305,7 @@ git commit -m "deps: add minisearch for catalog search"
 - [ ] **Step 1: Create `src/lib/catalog-index.ts` with types**
 
 ```typescript
-/** Matches catalogo/catalog-index.json schema v1. */
+/** Matches catalog/catalog-index.json schema v1. */
 export interface CatalogIndex {
   v: number;
   gen: string;
@@ -352,7 +352,7 @@ export interface DocEntry {
 ```typescript
 import { INDEX_BASE_URL } from "./feed-catalog";
 
-const CATALOG_INDEX_URL = `${INDEX_BASE_URL}/catalogo/catalog-index.json`;
+const CATALOG_INDEX_URL = `${INDEX_BASE_URL}/catalog/catalog-index.json`;
 
 export async function fetchCatalogIndex(): Promise<CatalogIndex> {
   const response = await fetch(CATALOG_INDEX_URL);

@@ -24,13 +24,13 @@ feed-repository (GitHub)                wawa-soft-website (Astro)
 build_catalog_index.py (new)            /catalog.astro
   reads all OPMLs                          ↓
   builds tree + docs array             fetch catalog-index.json
-  writes catalogo/catalog-index.json      ↓
+  writes catalog/catalog-index.json      ↓
   committed by CI                      parse tree → render sidebar nav
     ↓                                  index docs → MiniSearch
 raw.githubusercontent.com               drill-down | search | filters
 ```
 
-### Catalog Index Format (`catalogo/catalog-index.json`)
+### Catalog Index Format (`catalog/catalog-index.json`)
 
 ```typescript
 interface CatalogIndex {
@@ -133,7 +133,7 @@ Single Astro page at `src/pages/catalog.astro`. Generates `/catalog/index.html`.
 ## Behavior and States
 
 ### Loading
-- On page load, fetch `catalogo/catalog-index.json` from `raw.githubusercontent.com`.
+- On page load, fetch `catalog/catalog-index.json` from `raw.githubusercontent.com`.
 - Show a subtle progress bar or skeleton while loading.
 - Parse tree and render sidebar immediately as JSON streams.
 - Initialize MiniSearch with docs array.
@@ -205,9 +205,9 @@ Each feed in results is a compact card (not the full datasheet):
 
 | File | Action |
 |---|---|
-| `scripts/build_catalog_index.py` | Create — generates `catalogo/catalog-index.json` |
+| `scripts/build_catalog_index.py` | Create — generates `catalog/catalog-index.json` |
 | `.github/workflows/validate.yml` | Modify — add catalog index build step |
-| `catalogo/catalog-index.json` | Create — initial index (committed) |
+| `catalog/catalog-index.json` | Create — initial index (committed) |
 
 ### wawa-soft-website
 
