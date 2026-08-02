@@ -124,23 +124,31 @@ const ogDesc = ssrFeedDesc || "Datasheet for a source in the FeedMine catalog.";
           </p>
         ) : null}
       </div>
-    ) : ssrNotFound ? (
-      <div class="mt-16 text-center">
-        <p class="text-[15px] text-[#5c5c5c]">Source ID not found in the FeedMine catalog.</p>
-        <a href="https://github.com/wawasoft/feed-repository" target="_blank" rel="noopener noreferrer"
-           class="mt-3 inline-flex items-center gap-1.5 text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]">
-          Browse catalog on GitHub &rarr;
-        </a>
-      </div>
-    ) : ssrInvalid ? (
-      <div class="mt-16 text-center">
-        <p class="text-[15px] text-[#5c5c5c]">Invalid source ID. A source ID is a 64-character hexadecimal string.</p>
-      </div>
-    ) : ssrMissing ? (
-      <div class="mt-16 text-center">
-        <p class="text-[15px] text-[#5c5c5c]">No source ID provided. Add ?sourceId=&lt;64-char-hex&gt; to the URL.</p>
-      </div>
     ) : null}
+
+    {/* SSR error states: hidden initially, shown by JS only when SSR catches an
+        error that the client can't recover from. On static builds these never
+        render (ssrMissing/ssrNotFound are static-build artifacts, not real
+        errors — the client JS handles everything at runtime). */}
+    <div id="feed-ssr-error" class="hidden">
+      {ssrNotFound ? (
+        <div class="mt-16 text-center">
+          <p class="text-[15px] text-[#5c5c5c]">Source ID not found in the FeedMine catalog.</p>
+          <a href="https://github.com/wawasoft/feed-repository" target="_blank" rel="noopener noreferrer"
+             class="mt-3 inline-flex items-center gap-1.5 text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]">
+            Browse catalog on GitHub &rarr;
+          </a>
+        </div>
+      ) : ssrInvalid ? (
+        <div class="mt-16 text-center">
+          <p class="text-[15px] text-[#5c5c5c]">Invalid source ID. A source ID is a 64-character hexadecimal string.</p>
+        </div>
+      ) : ssrMissing ? (
+        <div class="mt-16 text-center">
+          <p class="text-[15px] text-[#5c5c5c]">No source ID provided. Add ?sourceId=&lt;64-char-hex&gt; to the URL.</p>
+        </div>
+      ) : null}
+    </div>
 
     <!-- CLIENT SKELETON: shown only when SSR had no data; JS replaces on load -->
     <div id="feed-content" class={ssrFeed ? "hidden" : "mt-6 space-y-10"}>
