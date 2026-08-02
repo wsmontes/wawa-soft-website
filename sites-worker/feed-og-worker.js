@@ -138,7 +138,7 @@ function injectOGTags(html, feed, sourceId) {
   // <title>
   result = result.replace(
     /<title>[^<]*<\/title>/,
-    `<title>${escapeAttr(title)} — Wawasoft</title>`
+    `<title>${escapeAttr(title)} on FeedMine</title>`
   );
 
   // <meta name="description">
@@ -150,7 +150,7 @@ function injectOGTags(html, feed, sourceId) {
   // og:title
   result = result.replace(
     /<meta property="og:title" content="[^"]*">/,
-    `<meta property="og:title" content="${escapeAttr(title)}">`
+    `<meta property="og:title" content="${escapeAttr(title)} on FeedMine">`
   );
 
   // og:description
@@ -162,7 +162,7 @@ function injectOGTags(html, feed, sourceId) {
   // twitter:title
   result = result.replace(
     /<meta name="twitter:title" content="[^"]*">/,
-    `<meta name="twitter:title" content="${escapeAttr(title)}">`
+    `<meta name="twitter:title" content="${escapeAttr(title)} on FeedMine">`
   );
 
   // twitter:description

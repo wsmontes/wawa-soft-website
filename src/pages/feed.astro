@@ -48,7 +48,7 @@ const ssrFeedHost = (() => {
   try { return new URL(ssrFeed?.htmlUrl ?? "").hostname; } catch { return ""; }
 })();
 
-const ogTitle = ssrFeedTitle || "FeedMine Catalog";
+const ogTitle = ssrFeedTitle ? `${ssrFeedTitle} on FeedMine` : "FeedMine Catalog";
 const ogDesc = ssrFeedDesc || "Datasheet for a source in the FeedMine catalog.";
 ---
 
@@ -329,6 +329,9 @@ const ogDesc = ssrFeedDesc || "Datasheet for a source in the FeedMine catalog.";
 
     contentEl.innerHTML = renderDatasheet(feed, manifest);
     contentEl.classList.remove("hidden");
+
+    // Update browser tab title
+    document.title = `${feed.title} on FeedMine — Wawasoft`;
 
     // Wire copy-feed-url button
     contentEl.querySelectorAll<HTMLButtonElement>("[data-copy-feed-url]").forEach((btn) => {
