@@ -204,10 +204,9 @@ addEventListener("fetch", (event) => {
 
 async function handleRequest(request) {
     const url = new URL(request.url);
-    const userAgent = request.headers.get("User-Agent") || "";
 
-    // Only intercept /feed or /feed/ with a valid sourceId for crawlers.
-    if ((url.pathname !== "/feed" && url.pathname !== "/feed/") || !isCrawler(userAgent)) {
+    // Only intercept /feed or /feed/ with a valid sourceId.
+    if (url.pathname !== "/feed" && url.pathname !== "/feed/") {
       return fetch(request);
     }
 
@@ -229,9 +228,9 @@ async function handleRequest(request) {
     const html = await originResponse.text();
     const rewritten = injectOGTags(html, feed, sourceId);
 
-  return new Response(rewritten, {
-    status: originResponse.status,
-    statusText: originResponse.statusText,
-    headers: originResponse.headers,
-  });
-}
+    return new Response(rewritten, {
+      status: originResponse.status,
+      statusText: originResponse.statusText,
+      headers: originResponse.headers,
+    });
+  }
