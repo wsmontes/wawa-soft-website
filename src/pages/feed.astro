@@ -405,6 +405,10 @@ const ogDesc = ssrFeedDesc || "Datasheet for a source in the FeedMine catalog.";
                class="inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[13px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]">
               Visit website &rarr;
             </a>` : ""}
+          <a href="feedmine://source?url=${encodeURIComponent(feed.xmlUrl)}"
+             class="inline-flex items-center gap-1.5 rounded-md border border-[#f0dfcf] bg-[#fffaf4] px-4 py-2 text-[13px] font-medium text-[#1a1a1a] transition-colors hover:border-[#e0c8a0]">
+            ${iconFeedmine()} Open in FeedMine
+          </a>
         </div>
       </div>
 
@@ -622,6 +626,11 @@ const ogDesc = ssrFeedDesc || "Datasheet for a source in the FeedMine catalog.";
   }
 
   // --- Inline SVG icons ---
+
+  function iconFeedmine(): string {
+    // FeedMine gradient symbol — simplified 16px version
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v12"/><path d="M6 12h12"/></svg>`;
+  }
 
   function iconCopy(): string {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
