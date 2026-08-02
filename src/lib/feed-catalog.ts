@@ -4,7 +4,7 @@ export interface FeedRecord {
   description: string;
   xmlUrl: string;
   htmlUrl: string | null;
-  /** OPML `type` attribute ("rss", "atom", …). Not present in index shards yet. */
+  /** OPML `type` attribute ("rss", "atom", …). */
   type?: string;
   language: string;
   category: string;
@@ -107,6 +107,15 @@ export function activityLabel(activity: string): string {
 
 export function natureLabel(nature: string): string {
   return NATURE_LABELS[nature] ?? nature;
+}
+
+export function formatLabel(format: string): string {
+  const labels: Record<string, string> = {
+    rss: "RSS",
+    atom: "Atom",
+    jsonfeed: "JSON Feed",
+  };
+  return labels[format?.toLowerCase()] ?? format;
 }
 
 export function formatEnabled(value: string): string {

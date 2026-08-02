@@ -250,6 +250,7 @@ const ogDesc = ssrFeedDesc || "Datasheet for a source in the FeedMine catalog.";
     mediaKindLabel,
     activityLabel,
     natureLabel,
+    formatLabel,
     INDEX_BASE_URL,
   } from "../lib/feed-catalog";
 
@@ -416,7 +417,7 @@ const ogDesc = ssrFeedDesc || "Datasheet for a source in the FeedMine catalog.";
       <section>
         <h2 class="text-[16px] font-medium text-[#1a1a1a]">Identity</h2>
         <div class="mt-3 grid gap-3 sm:grid-cols-3">
-          ${card("Format", feed.type ?? "—")}
+          ${card("Format", formatLabel(feed.type ?? "") || "—")}
           ${card("Language", feed.language)}
           ${card("Media", mediaKindLabel(feed.feedmineMediaKind))}
         </div>
