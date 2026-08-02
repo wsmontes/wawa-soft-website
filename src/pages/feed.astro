@@ -1,10 +1,60 @@
 ---
 import Layout from "../layouts/Layout.astro";
+
+// ── SSR: pre-fetch feed data so the page has content without JS ──
+// GitHub raw CDN is fast; fall through gracefully if it's unavailable.
+
+const INDEX_BASE = "https://raw.githubusercontent.com/wawasoft/feed-repository/main";
+const SOURCE_ID_RE = /^[a-f0-9]{64}$/;
+
+const sourceId = Astro.url.searchParams.get("sourceId");
+let ssrFeed: Record<string, any> | null = null;
+let ssrManifest: Record<string, any> | null = null;
+let ssrError: string | null = null;
+let ssrNotFound = false;
+let ssrInvalid = false;
+let ssrMissing = false;
+
+if (!sourceId) {
+  ssrMissing = true;
+} else if (!SOURCE_ID_RE.test(sourceId)) {
+  ssrInvalid = true;
+} else {
+  const shardKey = sourceId.substring(0, 2).toLowerCase();
+  try {
+    const [shardRes, manifestRes] = await Promise.all([
+      fetch(`${INDEX_BASE}/index/${shardKey}.json`),
+      fetch(`${INDEX_BASE}/manifest.json`).catch(() => null),
+    ]);
+    if (shardRes.ok) {
+      const index: Record<string, any> = await shardRes.json();
+      ssrFeed = index[sourceId] ?? null;
+      if (!ssrFeed) ssrNotFound = true;
+    } else {
+      ssrError = `Shard fetch failed (${shardRes.status})`;
+    }
+    if (manifestRes && (manifestRes as Response).ok) {
+      ssrManifest = await (manifestRes as Response).json();
+    }
+  } catch (e: any) {
+    ssrError = e.message ?? String(e);
+  }
+}
+
+// SSR-derived helpers
+const ssrFeedTitle = ssrFeed?.title ?? "";
+const ssrFeedDesc = ssrFeed?.description ?? "";
+const ssrFeedHost = (() => {
+  try { return new URL(ssrFeed?.htmlUrl ?? "").hostname; } catch { return ""; }
+})();
+
+const ogTitle = ssrFeedTitle || "FeedMine Catalog";
+const ogDesc = ssrFeedDesc || "Datasheet for a source in the FeedMine catalog.";
 ---
 
 <Layout
-  title="Feed Catalog"
-  description="FeedMine catalog entry — datasheet for a feed source."
+  title={ogTitle}
+  description={ogDesc}
 >
   <div id="feed-datasheet" class="pb-16 pt-8">
     <!-- Breadcrumb -->
@@ -16,21 +66,97 @@ import Layout from "../layouts/Layout.astro";
       FeedMine Catalog
     </a>
 
-    <!-- SKELETON: replaced by JS on successful load -->
-    <div id="feed-content" class="mt-6 space-y-10">
+    <!-- SSR-rendered hero (no-JS fallback + instant content) -->
+    {ssrFeed ? (
+      <div id="feed-ssr-content" class="mt-6 space-y-10">
+        <!-- Hero -->
+        <div class="rounded-lg border border-[#e8e4dd] p-6">
+          <div class="flex items-start gap-4">
+            {ssrFeedHost && (
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${ssrFeedHost}&sz=48`}
+                alt=""
+                class="mt-0.5 h-6 w-6 shrink-0 rounded-sm"
+                width="24" height="24"
+                loading="lazy"
+                onerror="this.style.display='none'"
+              />
+            )}
+            <div class="min-w-0 flex-1">
+              <h1 class="text-[22px] font-medium leading-tight text-[#1a1a1a]">
+                {ssrFeed.title}
+              </h1>
+              <p class="mt-2 max-w-[620px] text-[15px] leading-relaxed text-[#5c5c5c]">
+                {ssrFeed.description}
+              </p>
+              <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-[#6b6b6b]">
+                {ssrFeed.htmlUrl && (
+                  <a href={ssrFeed.htmlUrl} target="_blank" rel="noopener noreferrer"
+                     class="inline-flex items-center gap-1 underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    {ssrFeedHost}
+                  </a>
+                )}
+                {ssrFeed.xmlUrl && (
+                  <a href={ssrFeed.xmlUrl} target="_blank" rel="noopener noreferrer"
+                     class="inline-flex items-center gap-1 underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:text-[#1a1a1a] hover:decoration-[#8a8a8a]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+                    RSS feed
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Context banner -->
+        <div class="rounded-md border border-[#f0dfcf] bg-[#fffaf4] p-3 text-[13px] leading-relaxed text-[#6b6b6b]">
+          This source is part of the{' '}
+          <a href="/feedmine" class="font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]">FeedMine</a>{' '}
+          catalog — an open-source reader for iOS.&ensp;
+          <a href="/catalog" class="font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]">Browse 43,000+ sources &rarr;</a>
+        </div>
+
+        {ssrManifest ? (
+          <p class="text-[12px] text-[#8a8a8a]">
+            Catalog data from {new Date(ssrManifest.generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}.{' '}
+            {ssrManifest.sourceCount?.toLocaleString()} sources across {ssrManifest.fileCount?.toLocaleString()} OPML files.
+          </p>
+        ) : null}
+      </div>
+    ) : ssrNotFound ? (
+      <div class="mt-16 text-center">
+        <p class="text-[15px] text-[#5c5c5c]">Source ID not found in the FeedMine catalog.</p>
+        <a href="https://github.com/wawasoft/feed-repository" target="_blank" rel="noopener noreferrer"
+           class="mt-3 inline-flex items-center gap-1.5 text-[14px] font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]">
+          Browse catalog on GitHub &rarr;
+        </a>
+      </div>
+    ) : ssrInvalid ? (
+      <div class="mt-16 text-center">
+        <p class="text-[15px] text-[#5c5c5c]">Invalid source ID. A source ID is a 64-character hexadecimal string.</p>
+      </div>
+    ) : ssrMissing ? (
+      <div class="mt-16 text-center">
+        <p class="text-[15px] text-[#5c5c5c]">No source ID provided. Add ?sourceId=&lt;64-char-hex&gt; to the URL.</p>
+      </div>
+    ) : null}
+
+    <!-- CLIENT SKELETON: shown only when SSR had no data; JS replaces on load -->
+    <div id="feed-content" class={ssrFeed ? "hidden" : "mt-6 space-y-10"}>
       <!-- Hero skeleton -->
       <div class="animate-pulse space-y-3">
-        <div class="h-7 w-64 rounded bg-[#e8e4dd]"></div>
-        <div class="h-5 w-full max-w-[560px] rounded bg-[#e8e4dd]"></div>
-        <div class="h-4 w-48 rounded bg-[#e8e4dd]"></div>
+        <div class="h-7 w-64 rounded bg-[#e3dfd7]"></div>
+        <div class="h-5 w-full max-w-[560px] rounded bg-[#e3dfd7]"></div>
+        <div class="h-4 w-48 rounded bg-[#e3dfd7]"></div>
       </div>
 
       <!-- Card skeletons -->
       <div class="grid gap-3 sm:grid-cols-3">
         {Array.from({ length: 3 }).map(() => (
           <div class="animate-pulse rounded-lg border border-[#e8e4dd] p-4">
-            <div class="mb-2 h-3 w-16 rounded bg-[#e8e4dd]"></div>
-            <div class="h-5 w-24 rounded bg-[#e8e4dd]"></div>
+            <div class="mb-2 h-3 w-16 rounded bg-[#e3dfd7]"></div>
+            <div class="h-5 w-24 rounded bg-[#e3dfd7]"></div>
           </div>
         ))}
       </div>
@@ -38,8 +164,8 @@ import Layout from "../layouts/Layout.astro";
       <div class="grid gap-3 sm:grid-cols-3">
         {Array.from({ length: 3 }).map(() => (
           <div class="animate-pulse rounded-lg border border-[#e8e4dd] p-4">
-            <div class="mb-2 h-3 w-16 rounded bg-[#e8e4dd]"></div>
-            <div class="h-5 w-36 rounded bg-[#e8e4dd]"></div>
+            <div class="mb-2 h-3 w-16 rounded bg-[#e3dfd7]"></div>
+            <div class="h-5 w-36 rounded bg-[#e3dfd7]"></div>
           </div>
         ))}
       </div>
@@ -47,23 +173,23 @@ import Layout from "../layouts/Layout.astro";
       <div class="grid gap-3 sm:grid-cols-2">
         {Array.from({ length: 2 }).map(() => (
           <div class="animate-pulse rounded-lg border border-[#e8e4dd] p-4">
-            <div class="mb-2 h-3 w-16 rounded bg-[#e8e4dd]"></div>
-            <div class="h-5 w-40 rounded bg-[#e8e4dd]"></div>
+            <div class="mb-2 h-3 w-16 rounded bg-[#e3dfd7]"></div>
+            <div class="h-5 w-40 rounded bg-[#e3dfd7]"></div>
           </div>
         ))}
       </div>
 
       <!-- Technical skeleton -->
       <div class="animate-pulse space-y-3">
-        <div class="h-5 w-20 rounded bg-[#e8e4dd]"></div>
-        <div class="h-4 w-full max-w-[520px] rounded bg-[#e8e4dd]"></div>
-        <div class="h-4 w-96 rounded bg-[#e8e4dd]"></div>
+        <div class="h-5 w-20 rounded bg-[#e3dfd7]"></div>
+        <div class="h-4 w-full max-w-[520px] rounded bg-[#e3dfd7]"></div>
+        <div class="h-4 w-96 rounded bg-[#e3dfd7]"></div>
       </div>
 
       <!-- Catalog footer skeleton -->
       <div class="animate-pulse rounded-lg border border-[#e8e4dd] p-4">
-        <div class="mb-2 h-3 w-32 rounded bg-[#e8e4dd]"></div>
-        <div class="h-4 w-72 rounded bg-[#e8e4dd]"></div>
+        <div class="mb-2 h-3 w-32 rounded bg-[#e3dfd7]"></div>
+        <div class="h-4 w-72 rounded bg-[#e3dfd7]"></div>
       </div>
     </div>
 
@@ -193,6 +319,28 @@ import Layout from "../layouts/Layout.astro";
     }
 
     contentEl.innerHTML = renderDatasheet(feed, manifest);
+    contentEl.classList.remove("hidden");
+
+    // Wire copy-feed-url button
+    contentEl.querySelectorAll<HTMLButtonElement>("[data-copy-feed-url]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const url = btn.getAttribute("data-copy-feed-url")!;
+        const label = btn.querySelector("[data-copy-label]");
+        const originalText = label?.textContent ?? "Copy RSS feed URL";
+        navigator.clipboard.writeText(url).then(() => {
+          if (label) label.textContent = "Copied!";
+          btn.classList.add("!bg-[#2d6a3f]");
+          setTimeout(() => {
+            if (label) label.textContent = originalText;
+            btn.classList.remove("!bg-[#2d6a3f]");
+          }, 1800);
+        }).catch(() => {});
+      });
+    });
+
+    // Hide SSR content now that client render is complete
+    const ssrEl = document.getElementById("feed-ssr-content");
+    if (ssrEl) ssrEl.style.display = "none";
   }
 
   retryBtn.addEventListener("click", () => {
@@ -207,20 +355,53 @@ import Layout from "../layouts/Layout.astro";
   ): string {
     const opmlUrl = `${INDEX_BASE_URL}/${feed._opmlPath}`;
     const repoUrl = `https://github.com/wawasoft/feed-repository/blob/main/${feed._opmlPath}`;
+    const faviconHost = (() => {
+      try { return new URL(feed.htmlUrl ?? "").hostname; } catch { return ""; }
+    })();
+    const faviconHtml = faviconHost
+      ? `<img src="https://www.google.com/s2/favicons?domain=${escapeAttr(faviconHost)}&amp;sz=48" alt="" class="mt-0.5 h-6 w-6 shrink-0 rounded-sm" width="24" height="24" onerror="this.style.display='none'" />`
+      : "";
 
     return `
       <!-- Hero -->
       <div class="rounded-lg border border-[#e8e4dd] p-6">
-        <h1 class="text-[22px] font-medium leading-tight text-[#1a1a1a]">
-          ${escapeHtml(feed.title)}
-        </h1>
-        <p class="mt-2 max-w-[620px] text-[15px] leading-relaxed text-[#5c5c5c]">
-          ${escapeHtml(feed.description)}
-        </p>
-        <div class="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-[#6b6b6b]">
-          ${feed.htmlUrl ? linkOrText(feed.htmlUrl, iconLink()) : ""}
-          ${linkOrText(feed.xmlUrl, iconFeed())}
+        <div class="flex items-start gap-4">
+          ${faviconHtml}
+          <div class="min-w-0 flex-1">
+            <h1 class="text-[22px] font-medium leading-tight text-[#1a1a1a]">
+              ${escapeHtml(feed.title)}
+            </h1>
+            <p class="mt-2 max-w-[620px] text-[15px] leading-relaxed text-[#5c5c5c]">
+              ${escapeHtml(feed.description)}
+            </p>
+            <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-[#6b6b6b]">
+              ${feed.htmlUrl ? linkOrText(feed.htmlUrl, iconLink()) : ""}
+              ${linkOrText(feed.xmlUrl, iconFeed())}
+            </div>
+          </div>
         </div>
+        <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-[#e8e4dd] pt-4">
+          <button
+            data-copy-feed-url="${escapeAttr(feed.xmlUrl)}"
+            class="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-[#333]"
+          >
+            ${iconCopy()}
+            <span data-copy-label>Copy RSS feed URL</span>
+          </button>
+          ${feed.htmlUrl ? `
+            <a href="${escapeAttr(feed.htmlUrl)}" target="_blank" rel="noopener noreferrer"
+               class="inline-flex items-center gap-1.5 rounded-md border border-[#d4d0c8] px-4 py-2 text-[13px] font-medium text-[#1a1a1a] transition-colors hover:border-[#b0aba0] hover:bg-[#f5f3ef]">
+              Visit website &rarr;
+            </a>` : ""}
+        </div>
+      </div>
+
+      <!-- Context banner -->
+      <div class="rounded-md border border-[#f0dfcf] bg-[#fffaf4] p-3 text-[13px] leading-relaxed text-[#6b6b6b]">
+        This source is part of the
+        <a href="/feedmine" class="font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]">FeedMine</a>
+        catalog — an open-source reader for iOS.&ensp;
+        <a href="/catalog" class="font-medium text-[#1a1a1a] underline underline-offset-4 decoration-[#c4bfb4] transition-colors hover:decoration-[#8a8a8a]">Browse 43,000+ sources &rarr;</a>
       </div>
 
       <!-- Identity -->
@@ -243,7 +424,7 @@ import Layout from "../layouts/Layout.astro";
         </div>
         <div class="mt-3 grid gap-3 sm:grid-cols-3">
           ${card("Nature", natureLabel(feed.feedmineNature))}
-          ${card("Activity", activityLabel(feed.feedmineActivity))}
+          ${activityCard(feed.feedmineActivity)}
           ${card("Default", formatEnabled(feed.feedmineDefaultEnabled))}
         </div>
         <div class="mt-3">
@@ -255,7 +436,7 @@ import Layout from "../layouts/Layout.astro";
       <section>
         <h2 class="text-[16px] font-medium text-[#1a1a1a]">Activity</h2>
         <div class="mt-3 grid gap-3 sm:grid-cols-2">
-          ${card("Articles cataloged", feed.feedmineArticlesFetched)}
+          ${bigMetricCard("Articles cataloged", feed.feedmineArticlesFetched)}
           ${card("Last item observed", formatTimestamp(feed.feedmineLatestItemAt))}
         </div>
         <p class="mt-2 text-[12px] text-[#8a8a8a]">
@@ -331,6 +512,37 @@ import Layout from "../layouts/Layout.astro";
       </div>`;
   }
 
+  function bigMetricCard(label: string, value: string): string {
+    return `
+      <div class="rounded-lg border border-[#e8e4dd] p-4">
+        <dt class="font-mono text-[11px] uppercase tracking-wider text-[#8a8a8a]">${escapeHtml(label)}</dt>
+        <dd class="mt-1 text-[24px] font-medium leading-tight text-[#1a1a1a]">${escapeHtml(value)}</dd>
+      </div>`;
+  }
+
+  function activityColor(activity: string): string {
+    switch (activity) {
+      case "prolific": return "#d44f2f";
+      case "active": return "#d47a2f";
+      case "quiet": return "#8a8a6a";
+      case "dormant": return "#8a8a8a";
+      default: return "#8a8a8a";
+    }
+  }
+
+  function activityCard(activity: string): string {
+    const color = activityColor(activity);
+    const label = activityLabel(activity);
+    return `
+      <div class="rounded-lg border border-[#e8e4dd] p-4">
+        <dt class="font-mono text-[11px] uppercase tracking-wider text-[#8a8a8a]">Activity</dt>
+        <dd class="mt-1 flex items-center gap-2 text-[14px] text-[#1a1a1a]">
+          <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background-color:${color}" aria-hidden="true"></span>
+          ${escapeHtml(label)}
+        </dd>
+      </div>`;
+  }
+
   function countryFromPath(path: string): string {
     const match = path.match(/^Feeds\/90_countries\/([^/]+)\//);
     if (!match) return "—";
@@ -398,6 +610,10 @@ import Layout from "../layouts/Layout.astro";
   }
 
   // --- Inline SVG icons ---
+
+  function iconCopy(): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+  }
 
   function iconLink(): string {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
