@@ -183,15 +183,18 @@ function injectOGTags(html, feed, sourceId) {
     `<link rel="canonical" href="${escapeAttr(shareUrl)}">`
   );
 
-  // Inject og:image + twitter:image before </head> if we have one.
-  if (ogImageBlock) {
-    result = result.replace("</head>", `  ${ogImageBlock}\n</head>`);
-    // Switch twitter card to summary (small image alongside text)
-    result = result.replace(
-      /<meta name="twitter:card" content="[^"]*">/,
-      `<meta name="twitter:card" content="summary">`
-    );
-  }
+  // Inject og:image + twitter:image before </head>.
+  // Use the FeedMine brand symbol (512px, meets WhatsApp 200px minimum).
+  // The source favicon is too small (16px) for rich preview cards.
+  const feedmineOgImage = "https://wawasoft.net/feedmine-og.png";
+  result = result.replace(
+    "</head>",
+    `  <meta property="og:image" content="${feedmineOgImage}">\n  <meta property="og:image:width" content="512">\n  <meta property="og:image:height" content="512">\n  <meta name="twitter:image" content="${feedmineOgImage}">\n</head>`
+  );
+  result = result.replace(
+    /<meta name="twitter:card" content="[^"]*">/,
+    `<meta name="twitter:card" content="summary">`
+  );
 
   return result;
 }
